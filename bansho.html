@@ -530,11 +530,16 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   Store.init();
 
   // ---------- AI ----------
-  (async () => {
+  // AI の準備（数秒かかることがある）。準備前に送られたら、終わるまで待つ。
+  S.sampleReady = (async () => {
     try { S.sample = window.claude && window.claude.use ? await window.claude.use('sample') : null; } catch { S.sample = null; }
     S.aiChecked = true;
     if (!S.G) renderTitle();
+    else if (!S.busy) renderGame();
+    return S.sample;
   })();
+  async function getSample() { return S.sample || (await S.sampleReady); }
+  const NO_AI = 'この画面では AI を呼び出せません。claude.ai をブラウザで開くか、Claude アプリを最新版にしてから開き直してください。';
   const AI_ERR = {
     not_granted: 'AI の利用が許可されませんでした。',
     sampling_disabled: 'このアカウントでは AI を使えません。',
@@ -680,8 +685,9 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
       const inp = work ? { work: $('f-work').value.trim(), char, scene: $('f-scene').value.trim() } : { premise: $('f-premise').value.trim(), char };
       const st = $('st');
       if ((work && !inp.work) || (!work && !inp.premise) || !char) { st.className = 'status err'; st.textContent = work ? '作品名と登場人物を書いてください。' : '設定と立場を書いてください。'; return; }
-      if (!S.sample) { st.className = 'status err'; st.textContent = 'この画面では AI を呼び出せません。claude.ai で開いてください。'; return; }
-      $('go').disabled = true; $('stop').hidden = false; st.className = 'status'; st.textContent = '世界を組み立てています…（30秒〜1分ほど）';
+      $('go').disabled = true; st.className = 'status'; st.textContent = 'AI を準備しています…';
+      if (!(await getSample())) { st.className = 'status err'; st.textContent = NO_AI; $('go').disabled = false; return; }
+      $('stop').hidden = false; st.textContent = '世界を組み立てています…（30秒〜1分ほど）';
       S.ctl = new AbortController();
       try {
         const w = await S.sample.json(genPrompt(work ? 'work' : 'custom', inp), { signal: S.ctl.signal });
@@ -953,12 +959,17 @@ ${action}
   async function sendAction(action, { regen = false } = {}) {
     action = str(action).trim();
     if (!action || S.busy || !S.G || (S.G.status !== 'playing' && !regen)) return;
-    if (!S.sample) { S.toast = 'この画面では AI を呼び出せません。claude.ai で開いてください。'; renderGame(); return; }
     const base = regen && S.variants ? S.variants.base : clone(S.G);
     S.busy = true; S.toast = ''; S.sheet = null; S.showSugg = false;
     if (regen) S.G = clone(base);
     S.G.log.push({ t: 'act', turn: S.G.turn + 1, text: action });
     renderGame();
+    if (!(await getSample())) {
+      S.G = regen && S.variants ? clone(S.variants.list[S.variants.idx]) : base;
+      if (!regen) S.draft = action;
+      S.toast = NO_AI; S.busy = false; renderGame();
+      return;
+    }
     try {
       const next = await runTurn(base, action);
       if (!regen || !S.variants) S.variants = { base, action, list: [] };
@@ -1039,7 +1050,7 @@ ${hist || '（はじめて）'}
     const g = S.G;
     const e = g && g.entities.find((x) => x.id === eid);
     if (!e || !text || S.chatBusy) return;
-    if (!S.sample) { S.toast = 'この画面では AI を呼び出せません。'; return renderSheet(); }
+    if (!(await getSample())) { S.toast = NO_AI; S.chatDraft = text; return renderSheet(); }
     g.chats[eid] = arr(g.chats[eid]);
     const list = g.chats[eid];
     const before = list.slice();
@@ -1070,7 +1081,8 @@ ${hist || '（はじめて）'}
 
   async function refreshQuests() {
     const g = S.G;
-    if (!S.sample || S.busy || S.questBusy) return;
+    if (S.busy || S.questBusy) return;
+    if (!(await getSample())) { S.toast = NO_AI; return renderSheet(); }
     S.questBusy = true; renderSheet();
     try {
       S.ctl = new AbortController();
@@ -1148,6 +1160,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         <button class="gear" id="gear" aria-label="設定">${ic('gear')}</button></div>
       <div class="feed pad" id="feed">${feedHTML()}<div id="live">${S.busy ? '<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>世界が動いている…</div>' : ''}</div>${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ''}</div>
       <div class="composer">
+        ${S.aiChecked && !S.sample ? `<div class="pad"><div class="toast">${esc(NO_AI)}</div></div>` : ''}
         ${sugg}
         <div class="inrow pad">
           <button class="ic ${S.showSugg ? 'on' : ''}" id="bulb" aria-label="行動の候補" ${ended || S.busy ? 'disabled' : ''}>${ic('bulb')}</button>
@@ -1166,7 +1179,11 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if (S.draft) { ta.value = S.draft; S.draft = ''; }
     const fit = () => { ta.style.height = '48px'; ta.style.height = Math.min(140, ta.scrollHeight + 2) + 'px'; };
     ta.addEventListener('input', fit); fit();
-    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAction(ta.value); } });
+    ta.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229 || e.shiftKey) return;
+      e.preventDefault();
+      sendAction(ta.value);
+    });
     if ($('send')) $('send').onclick = () => sendAction(ta.value);
     if ($('stop')) $('stop').onclick = () => S.ctl && S.ctl.abort();
     app.querySelectorAll('[data-sugg]').forEach((b) => b.onclick = () => { ta.value = b.dataset.sugg; S.showSugg = false; fit(); ta.focus(); app.querySelector('.sugg') && app.querySelector('.sugg').remove(); $('bulb').classList.remove('on'); });
