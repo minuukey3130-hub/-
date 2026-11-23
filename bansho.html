@@ -2,723 +2,1101 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
-/* 年代記の書庫: 和紙の帳面に、世界の動きが書き足されていく。左に自国の数値、中央に物語、右に勢力。 */
+/* 物語を読むアプリ: 中央に物語のカード、下にアイコンのタブ。タブを押すと下からパネルがせり上がる。 */
 :root {
-  --bg: #f1ece1;
-  --panel: #faf7f0;
-  --line: #d9d0bd;
-  --fg: #23201a;
-  --muted: #6e6656;
-  --accent: #8c2f23;
-  --accent-soft: #f0dcd5;
-  --good: #2f6b45;
-  --good-soft: #dcebdf;
-  --warn: #8a6414;
-  --warn-soft: #f2e6c8;
-  --bad: #9b2c2c;
-  --bad-soft: #f3d9d6;
-  --bar: #d8cfbc;
-  --ink: #23201a;
-  --display: 'Shippori Mincho', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
-  --body: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
+  --bg: #f3f4f8;
+  --surface: #ffffff;
+  --surface-2: #f6f7fb;
+  --line: #e3e5ee;
+  --fg: #1d2030;
+  --muted: #6b7087;
+  --accent: #4f5bd5;
+  --accent-2: #7a85f0;
+  --accent-soft: #e8eafc;
+  --good: #2f9e6a;
+  --good-soft: #e2f5ec;
+  --warn: #d68a1c;
+  --warn-soft: #fcf0dc;
+  --bad: #d9534f;
+  --bad-soft: #fbe5e4;
+  --track: #e8e9f0;
+  --shadow: 0 2px 10px rgba(29, 32, 48, 0.06), 0 1px 2px rgba(29, 32, 48, 0.05);
+  --t-time: #fbeee0; --t-time-fg: #c4701f;
+  --t-stat: #e2f4ea; --t-stat-fg: #2c8a5a;
+  --t-people: #ece6fb; --t-people-fg: #6a4fd0;
+  --t-chat: #e3eefb; --t-chat-fg: #2e6fbe;
+  --t-wallet: #e2f3f1; --t-wallet-fg: #23877b;
+  --t-items: #f7ecdc; --t-items-fg: #a8692a;
+  --t-quest: #f2e6d6; --t-quest-fg: #8f5a26;
+  --t-log: #eceef3; --t-log-fg: #505672;
+  --cork: #9c7a52; --cork-dark: #7d5f3c;
+  --font: 'Zen Kaku Gothic New', 'Hiragino Sans', 'Yu Gothic', system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17150f; --panel: #201d16; --line: #3a3427; --fg: #ece5d4; --muted: #a59c88;
-    --accent: #e07a62; --accent-soft: #3b231c; --good: #7cc395; --good-soft: #1d3326;
-    --warn: #e2b55a; --warn-soft: #3a2f17; --bad: #ec8b80; --bad-soft: #3d1f1c; --bar: #3a3427; --ink: #ece5d4;
+    --bg: #12131a; --surface: #1c1e28; --surface-2: #232633; --line: #2f3242; --fg: #e8e9f2; --muted: #9a9fb8;
+    --accent: #8f98ff; --accent-2: #aab1ff; --accent-soft: #272b4a; --good: #5fcf98; --good-soft: #1b3328;
+    --warn: #f0b25a; --warn-soft: #3a2e1a; --bad: #f08a86; --bad-soft: #3d2222; --track: #2c2f3e;
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    --t-time: #3a2d1f; --t-time-fg: #f0b06a; --t-stat: #1d3328; --t-stat-fg: #72d6a3;
+    --t-people: #2c2546; --t-people-fg: #b7a5ff; --t-chat: #1f2c40; --t-chat-fg: #8ebcf5;
+    --t-wallet: #1b3532; --t-wallet-fg: #6fd3c4; --t-items: #3a2f20; --t-items-fg: #e7b27a;
+    --t-quest: #3a2f22; --t-quest-fg: #e0ae7c; --t-log: #262938; --t-log-fg: #b8bdd6;
+    --cork: #6b5236; --cork-dark: #523e28;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #17150f; --panel: #201d16; --line: #3a3427; --fg: #ece5d4; --muted: #a59c88;
-  --accent: #e07a62; --accent-soft: #3b231c; --good: #7cc395; --good-soft: #1d3326;
-  --warn: #e2b55a; --warn-soft: #3a2f17; --bad: #ec8b80; --bad-soft: #3d1f1c; --bar: #3a3427; --ink: #ece5d4;
+  --bg: #12131a; --surface: #1c1e28; --surface-2: #232633; --line: #2f3242; --fg: #e8e9f2; --muted: #9a9fb8;
+  --accent: #8f98ff; --accent-2: #aab1ff; --accent-soft: #272b4a; --good: #5fcf98; --good-soft: #1b3328;
+  --warn: #f0b25a; --warn-soft: #3a2e1a; --bad: #f08a86; --bad-soft: #3d2222; --track: #2c2f3e;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --t-time: #3a2d1f; --t-time-fg: #f0b06a; --t-stat: #1d3328; --t-stat-fg: #72d6a3;
+  --t-people: #2c2546; --t-people-fg: #b7a5ff; --t-chat: #1f2c40; --t-chat-fg: #8ebcf5;
+  --t-wallet: #1b3532; --t-wallet-fg: #6fd3c4; --t-items: #3a2f20; --t-items-fg: #e7b27a;
+  --t-quest: #3a2f22; --t-quest-fg: #e0ae7c; --t-log: #262938; --t-log-fg: #b8bdd6;
+  --cork: #6b5236; --cork-dark: #523e28;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
-body {
-  background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.75;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 0;
-}
+body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.75; overflow: hidden; }
 button, input, textarea, select { font: inherit; color: inherit; }
-button { cursor: pointer; }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.app { height: 100%; display: flex; flex-direction: column; max-width: 820px; margin: 0 auto; position: relative; }
+.pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
-.app { max-width: 1320px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+/* ---------- 上の帯 ---------- */
+.top { display: flex; align-items: center; gap: 10px; padding-block: 12px 10px; border-bottom: 3px solid var(--accent-2); background: var(--surface); }
+.top .back { color: var(--muted); padding: 4px; margin-left: -4px; }
+.top h1 { font-size: 19px; font-weight: 900; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tier { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; color: var(--fg); background: var(--surface); }
+.tier svg { width: 18px; height: 18px; color: var(--accent); }
+.gear { color: var(--accent); padding: 4px; }
 
-/* ---------- 題 ---------- */
-.title { padding-block: 40px 48px; display: grid; gap: 28px; }
-.brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-.brand h1 { font-size: clamp(40px, 7vw, 64px); font-weight: 800; letter-spacing: 0.08em; }
-.brand p { margin: 0; color: var(--muted); }
-.ai-note { border: 1px solid var(--line); background: var(--warn-soft); color: var(--fg); padding: 10px 14px; border-radius: 6px; font-size: 14px; }
-.section-label { font-size: 12px; letter-spacing: 0.18em; color: var(--muted); margin: 0 0 10px; }
-.modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-.mode { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 18px; display: grid; gap: 6px; }
-.mode:hover { border-color: var(--accent); }
-.mode h3 { font-size: 20px; }
-.mode .k { font-size: 12px; color: var(--accent); letter-spacing: 0.12em; }
-.mode p { margin: 0; color: var(--muted); font-size: 14px; }
-.saves { display: grid; gap: 8px; }
-.save { display: flex; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; flex-wrap: wrap; }
-.save .info { flex: 1; min-width: 0; }
-.save .info b { font-family: var(--display); }
-.save .info span { color: var(--muted); font-size: 13px; margin-left: 8px; }
-.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 14px; }
-.btn:hover { border-color: var(--fg); }
-.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-.btn.ghost { background: transparent; }
-.btn.danger { color: var(--bad); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-
-/* ---------- 新しい世界のフォーム ---------- */
-.setup { padding-block: 32px 48px; max-width: 720px; display: grid; gap: 18px; }
-.setup h2 { font-size: 28px; }
-.setup p.lead { margin: 0; color: var(--muted); }
-.field { display: grid; gap: 6px; }
-.field label { font-weight: 700; font-size: 14px; }
-.field small { color: var(--muted); font-size: 12px; }
-.field input, .field textarea { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
-.field textarea { min-height: 96px; resize: vertical; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.status { color: var(--muted); font-size: 14px; }
-.status.err { color: var(--bad); }
-
-/* ---------- ゲーム画面 ---------- */
-.topbar { display: flex; align-items: center; gap: 12px; padding-block: 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.topbar .wt { font-family: var(--display); font-size: 20px; font-weight: 700; }
-.topbar .date { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
-.topbar .sp { flex: 1; }
-.tabs { display: none; gap: 4px; padding-block: 8px; }
-.tabs button { flex: 1; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 6px 0; }
-.tabs button[aria-selected="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
-
-.layout { flex: 1; display: grid; grid-template-columns: 270px minmax(0, 1fr) 290px; gap: 20px; padding-block: 16px; min-height: 0; }
-.side { display: grid; gap: 18px; align-content: start; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; }
-.card h3 { font-size: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
-.card h3 small { font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 12px; }
-
-.stat { display: grid; gap: 3px; margin-bottom: 10px; }
-.stat .top { display: flex; justify-content: space-between; font-size: 14px; }
-.stat .top b { font-variant-numeric: tabular-nums; }
-.stat .top .flash-up { color: var(--good); }
-.stat .top .flash-down { color: var(--bad); }
-.meter { height: 6px; background: var(--bar); border-radius: 3px; overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--fg); transition: width 0.5s ease; }
-.meter.low i { background: var(--bad); }
-.stat .desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-.trait { display: grid; grid-template-columns: 3.5em 1fr 2.2em; gap: 8px; align-items: center; font-size: 13px; margin-bottom: 6px; }
-.trait .meter i { background: var(--accent); }
-.trait b { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
-.perceive { font-size: 13px; color: var(--muted); margin: 6px 0 0; line-height: 1.6; }
-
-.ent { padding: 10px 0; border-top: 1px solid var(--line); display: grid; gap: 4px; }
-.ent:first-of-type { border-top: 0; padding-top: 0; }
-.ent .nm { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.ent .nm b { font-family: var(--display); }
-.ent .kind { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; margin-left: 6px; }
-.pill { font-size: 12px; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
-.pill.ally { background: var(--good-soft); color: var(--good); }
-.pill.neutral { background: var(--bar); color: var(--fg); }
-.pill.wary { background: var(--warn-soft); color: var(--warn); }
-.pill.hostile { background: var(--bad-soft); color: var(--bad); }
-.rel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; color: var(--muted); }
-.relbar { position: relative; height: 6px; background: var(--bar); border-radius: 3px; }
-.relbar i { position: absolute; top: 0; bottom: 0; background: var(--fg); border-radius: 3px; }
-.relbar::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--muted); }
-.ent .att { font-size: 13px; }
-.ent .note { font-size: 12px; color: var(--muted); line-height: 1.5; }
-
-.news { display: grid; gap: 8px; }
-.news div { font-size: 13px; line-height: 1.55; }
-.news div b { font-weight: 700; color: var(--accent); margin-right: 6px; }
-.news div span { color: var(--muted); font-size: 11px; margin-left: 4px; }
-
-/* 物語 */
-.story { display: flex; flex-direction: column; min-height: 0; }
-.feed { flex: 1; display: grid; gap: 14px; align-content: start; padding-bottom: 12px; }
-.intro { font-family: var(--display); font-size: 17px; line-height: 1.95; white-space: pre-wrap; }
-.act { justify-self: end; max-width: 85%; background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 10px 10px 2px 10px; white-space: pre-wrap; }
-.act small { display: block; opacity: 0.7; font-size: 11px; }
-.res { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 10px; }
-.res .head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
-.badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 4px; }
+/* ---------- 物語 ---------- */
+.feed { flex: 1; overflow-y: auto; padding-block: 16px 20px; display: grid; gap: 14px; align-content: start; -webkit-overflow-scrolling: touch; }
+.story { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 14px 18px 18px; box-shadow: var(--shadow); display: grid; gap: 10px; }
+.datechip { justify-self: start; display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 13px; padding: 3px 12px; border-radius: 999px; }
+.datechip svg { width: 16px; height: 16px; }
+.narr { white-space: pre-wrap; font-size: 16px; line-height: 1.95; }
+.narr em { font-style: normal; color: var(--accent); }
+.verdict { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.badge { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; }
 .badge.success { background: var(--good-soft); color: var(--good); }
 .badge.partial { background: var(--warn-soft); color: var(--warn); }
 .badge.failure { background: var(--bad-soft); color: var(--bad); }
-.res .narr { white-space: pre-wrap; font-size: 15.5px; line-height: 1.9; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 12px; border-radius: 4px; padding: 1px 8px; border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
-.chip.up { color: var(--good); border-color: var(--good); }
-.chip.down { color: var(--bad); border-color: var(--bad); }
-.events { border-left: 3px solid var(--accent); padding-left: 12px; display: grid; gap: 4px; }
-.events h4 { margin: 0; font-size: 12px; letter-spacing: 0.15em; color: var(--accent); font-weight: 700; }
-.events div { font-size: 14px; }
-.end { border: 2px solid var(--fg); border-radius: 8px; padding: 18px; text-align: center; display: grid; gap: 8px; }
-.end h3 { font-size: 26px; }
-.thinking { color: var(--muted); font-size: 14px; display: flex; gap: 10px; align-items: center; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s infinite ease-in-out; }
-@keyframes pulse { 50% { opacity: 0.25; transform: scale(0.7); } }
+.chip { font-size: 12px; border-radius: 999px; padding: 1px 10px; background: var(--surface-2); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.chip.up { color: var(--good); }
+.chip.down { color: var(--bad); }
+.events { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; display: grid; gap: 4px; font-size: 14px; }
+.events h4 { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; }
+.mine { justify-self: end; max-width: 85%; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 18px 18px 4px 18px; white-space: pre-wrap; font-size: 15px; }
+.tools { display: flex; align-items: center; gap: 4px; color: var(--muted); padding: 0 6px; margin-top: -4px; }
+.tools button { padding: 6px; border-radius: 10px; color: var(--muted); display: inline-flex; }
+.tools button:hover { background: var(--surface); color: var(--fg); }
+.tools button:disabled { opacity: 0.35; cursor: default; }
+.tools .pg { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+.tools .sp { flex: 1; }
+.end { background: var(--surface); border: 2px solid var(--fg); border-radius: 22px; padding: 20px; text-align: center; display: grid; gap: 6px; }
+.end h3 { font-size: 24px; margin: 0; font-weight: 900; }
+.thinking { display: flex; gap: 10px; align-items: center; color: var(--muted); font-size: 14px; }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: bob 1s infinite ease-in-out; }
+.dots i:nth-child(2) { animation-delay: 0.15s; } .dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bob { 50% { transform: translateY(-4px); opacity: 0.4; } }
+.toast { background: var(--bad-soft); color: var(--bad); border-radius: 14px; padding: 8px 14px; font-size: 14px; }
 
-.dock { position: sticky; bottom: 0; background: var(--bg); padding-block: 10px max(12px, env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); display: grid; gap: 8px; }
-.sugg { display: flex; gap: 6px; flex-wrap: wrap; }
-.sugg button { font-size: 13px; border: 1px dashed var(--muted); background: transparent; border-radius: 999px; padding: 3px 12px; text-align: left; }
-.sugg button:hover { border-style: solid; border-color: var(--fg); }
-.inputrow { display: flex; gap: 8px; align-items: flex-end; }
-.inputrow textarea { flex: 1; min-width: 0; min-height: 52px; max-height: 160px; resize: vertical; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+/* ---------- 入力 ---------- */
+.composer { background: var(--surface-2); border-top: 1px solid var(--line); padding-block: 8px; display: grid; gap: 8px; }
+.sugg { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.sugg button { white-space: nowrap; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; color: var(--fg); flex: none; }
+.sugg button:hover { border-color: var(--accent); }
+.inrow { display: flex; align-items: center; gap: 8px; }
+.inrow .ic { color: var(--muted); padding: 6px; border-radius: 10px; display: inline-flex; }
+.inrow .ic.on { color: var(--accent); background: var(--accent-soft); }
+.inrow textarea { flex: 1; min-width: 0; height: 48px; max-height: 140px; resize: none; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 11px 18px; line-height: 1.5; box-shadow: var(--shadow); }
+.inrow textarea:disabled { opacity: 0.6; }
+.send { color: var(--accent); padding: 6px; display: inline-flex; }
+.send:disabled { color: var(--muted); opacity: 0.6; cursor: default; }
+.send.stop { color: var(--bad); }
+
+/* ---------- 下のタブ ---------- */
+.tabbar { display: flex; justify-content: space-between; background: var(--surface); border-top: 1px solid var(--line); padding-block: 8px max(8px, env(safe-area-inset-bottom, 0px)); position: relative; z-index: 30; }
+.tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); padding: 2px 0; position: relative; }
+.tabbar button svg { width: 25px; height: 25px; }
+.tabbar button span { font-size: 10px; line-height: 1.2; }
+.tabbar button[aria-selected="true"] { color: var(--accent); }
+.tabbar button[aria-selected="true"]::after { content: ''; position: absolute; bottom: -6px; width: 22px; height: 3px; border-radius: 2px; background: var(--accent); }
+.tabbar .dot { position: absolute; top: 0; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+
+/* ---------- 下から出るパネル ---------- */
+.scrim { position: absolute; inset: 0; background: rgba(243, 244, 248, 0.55); backdrop-filter: blur(1px); z-index: 20; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .scrim { background: rgba(18, 19, 26, 0.6); } }
+:root[data-theme="dark"] .scrim { background: rgba(18, 19, 26, 0.6); }
+.sheet { position: absolute; left: 0; right: 0; bottom: var(--tabh, 64px); height: 72%; background: var(--surface); border-radius: 24px 24px 0 0; box-shadow: 0 -6px 30px rgba(29, 32, 48, 0.15); z-index: 25; display: flex; flex-direction: column; animation: up 0.22s ease-out; overflow: hidden; }
+.sheet.full { height: calc(100% - var(--tabh, 64px) - 8px); }
+@keyframes up { from { transform: translateY(40px); opacity: 0; } }
+.sheet .grab { width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 8px auto 0; }
+.sheet .sh { display: flex; align-items: center; gap: 8px; padding: 6px 16px 10px; font-weight: 900; font-size: 17px; border-bottom: 1px solid var(--line); }
+.sheet .sh .ttl { flex: 1; display: flex; align-items: center; gap: 8px; }
+.sheet .sh button { color: var(--muted); padding: 4px; display: inline-flex; }
+.sheet .body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; display: grid; gap: 12px; align-content: start; }
+.sheet[data-k="time"] .sh { background: var(--t-time); color: var(--t-time-fg); }
+.sheet[data-k="stat"] .sh { background: var(--t-stat); color: var(--t-stat-fg); }
+.sheet[data-k="people"] .sh { background: var(--t-people); color: var(--t-people-fg); }
+.sheet[data-k="chat"] .sh { background: var(--t-chat); color: var(--t-chat-fg); }
+.sheet[data-k="wallet"] .sh { background: var(--t-wallet); color: var(--t-wallet-fg); }
+.sheet[data-k="items"] .sh { background: var(--t-items); color: var(--t-items-fg); }
+.sheet[data-k="quest"] .sh { background: var(--t-quest); color: var(--t-quest-fg); }
+.sheet[data-k="log"] .sh, .sheet[data-k="settings"] .sh { background: var(--t-log); color: var(--t-log-fg); }
+
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; box-shadow: var(--shadow); }
+.row { display: flex; align-items: center; gap: 10px; }
+.muted { color: var(--muted); font-size: 13px; }
+.big-date { display: flex; align-items: center; gap: 14px; }
+.big-date .circ { width: 54px; height: 54px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.big-date b { font-size: 22px; font-weight: 900; display: block; line-height: 1.3; }
+.act-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; box-shadow: var(--shadow); }
+.act-btn:hover { border-color: var(--accent); }
+.act-btn .ico { width: 42px; height: 42px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: none; }
+.act-btn b { display: block; font-size: 16px; }
+.act-btn small { color: var(--muted); font-size: 13px; }
+.act-btn .chev { margin-left: auto; color: var(--muted); }
+.pill-btn { display: inline-flex; align-items: center; gap: 6px; justify-content: center; width: 100%; padding: 10px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); font-weight: 700; border: 1px solid var(--accent-2); }
+.field-in { display: flex; gap: 8px; align-items: center; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 6px 6px 6px 14px; }
+.field-in input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 6px 0; outline: none; }
+.field-in button { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; color: var(--muted); }
+.selrow { display: flex; align-items: center; gap: 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; }
+.selrow b { flex: 1; }
+.selrow select { border: 0; background: transparent; color: var(--muted); text-align: right; }
+
+/* ステータス */
+.sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; }
+.sitem { display: grid; gap: 4px; padding: 6px 0; min-width: 0; }
+.sitem .top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
+.sitem .top b { font-variant-numeric: tabular-nums; color: var(--accent); }
+.sitem .top b.low { color: var(--bad); }
+.sitem .top .txt { font-weight: 700; color: var(--fg); text-align: right; overflow-wrap: anywhere; }
+.sitem .top span:first-child { color: var(--muted); white-space: nowrap; }
+.bar { height: 7px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.5s ease; }
+.bar.red i { background: var(--bad); } .bar.amber i { background: var(--warn); } .bar.green i { background: var(--good); }
+.sitem .desc { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.sec { font-size: 13px; font-weight: 900; color: var(--muted); letter-spacing: 0.06em; margin: 4px 0 -4px; }
+
+/* 人物 */
+.avatar { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 900; font-size: 19px; flex: none; box-shadow: inset 0 -6px 12px rgba(0, 0, 0, 0.18); }
+.avatar.sq { border-radius: 14px; }
+.avatar.sm { width: 40px; height: 40px; font-size: 16px; }
+.pcard { display: grid; gap: 10px; }
+.pcard .nm { font-size: 18px; font-weight: 900; }
+.pcard .kind { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 8px; margin-left: 6px; font-weight: 500; }
+.kv { display: grid; gap: 4px; }
+.kv .top { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); font-weight: 700; }
+.kv .top b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.kv .top b.pos { color: var(--good); } .kv .top b.neg { color: var(--bad); }
+.cbar { position: relative; height: 7px; border-radius: 4px; background: var(--track); }
+.cbar i { position: absolute; top: 0; bottom: 0; border-radius: 4px; }
+.cbar::after { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--line); }
+.tline { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.tline span { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.tline b { text-align: right; }
+.talk { justify-self: start; display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 700; font-size: 14px; padding: 6px 12px; border-radius: 999px; background: var(--accent-soft); }
+.talk svg { width: 18px; height: 18px; }
+
+/* チャット */
+.clist { display: grid; }
+.citem { display: flex; gap: 12px; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--line); text-align: left; width: 100%; }
+.citem .mid { flex: 1; min-width: 0; }
+.citem .mid .t { display: flex; justify-content: space-between; gap: 8px; }
+.citem .mid .t b { font-size: 16px; }
+.citem .mid .t small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.citem .mid p { margin: 0; color: var(--muted); font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chatview { display: flex; flex-direction: column; min-height: 100%; gap: 10px; }
+.msgs { flex: 1; display: grid; gap: 8px; align-content: start; }
+.msg { max-width: 82%; padding: 8px 14px; border-radius: 18px; white-space: pre-wrap; font-size: 15px; line-height: 1.65; }
+.msg.me { justify-self: end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.msg.them { justify-self: start; background: var(--surface-2); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.msg-date { justify-self: center; font-size: 11px; color: var(--muted); }
+.cin { position: sticky; bottom: -24px; background: var(--surface); padding: 8px 0 4px; display: flex; gap: 8px; align-items: center; }
+.cin input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 999px; padding: 9px 16px; background: var(--surface-2); }
+.newchat { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 900; font-size: 16px; margin-top: 6px; }
+
+/* 資金 */
+.balance { border-radius: 22px; padding: 20px 22px; color: #fff; background: linear-gradient(135deg, #3d4fd6, #6f7ff2); position: relative; overflow: hidden; box-shadow: 0 8px 24px rgba(61, 79, 214, 0.3); }
+.balance small { opacity: 0.85; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.balance b { font-size: 40px; font-weight: 900; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; display: block; line-height: 1.3; overflow-wrap: anywhere; }
+.balance .wm { position: absolute; right: -6px; top: -14px; font-size: 110px; font-weight: 900; opacity: 0.12; line-height: 1; }
+.tx { display: flex; align-items: center; gap: 12px; }
+.tx .ar { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.tx .ar.in { background: var(--good-soft); color: var(--good); } .tx .ar.out { background: var(--bad-soft); color: var(--bad); }
+.tx .mid { flex: 1; min-width: 0; }
+.tx .mid b { display: block; font-size: 15px; }
+.tx .amt { font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tx .amt.in { color: var(--good); } .tx .amt.out { color: var(--bad); }
+
+/* 持ち物 */
+.igrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 12px 8px; text-align: center; box-shadow: var(--shadow); display: grid; gap: 4px; justify-items: center; }
+.item .em { font-size: 34px; line-height: 1.2; }
+.item b { font-size: 13px; line-height: 1.4; }
+.item.empty { border-style: dashed; box-shadow: none; background: transparent; min-height: 96px; }
+.idetail { display: grid; gap: 8px; }
+.idetail .row .em { font-size: 40px; }
+
+/* 依頼 */
+.sheet[data-k="quest"] .body { background: var(--cork); padding: 14px; }
+.board { border: 10px solid var(--cork-dark); border-radius: 14px; padding: 14px 12px 20px; display: grid; gap: 22px; background: var(--cork); box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.25); }
+.board h3 { text-align: center; color: #fff3e0; letter-spacing: 0.25em; margin: 4px 0 -6px; font-size: 18px; font-weight: 900; }
+.note { position: relative; background: #fbf6ea; color: #2a2418; padding: 18px 16px 14px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25); border-radius: 2px; display: grid; gap: 6px; }
+.note:nth-child(3n) { background: #fbf3c6; transform: rotate(0.6deg); } .note:nth-child(3n+1) { transform: rotate(-0.5deg); } .note:nth-child(3n+2) { background: #f8e6ef; transform: rotate(0.3deg); }
+.note::before { content: ''; position: absolute; top: -8px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e05a4a, #9b241a); box-shadow: 0 2px 3px rgba(0, 0, 0, 0.35); }
+.note h4 { margin: 0; font-size: 17px; font-weight: 900; line-height: 1.4; }
+.note p { margin: 0; font-size: 14px; color: #5a5040; line-height: 1.6; }
+.note .by { font-size: 13px; color: #7a6e58; }
+.note .by b { color: #b0561c; }
+.note .accept { background: #24211c; color: #fff; border-radius: 6px; padding: 8px; font-weight: 700; }
+.stamp { justify-self: start; font-size: 12px; font-weight: 900; letter-spacing: 0.12em; padding: 2px 12px; border-radius: 999px; }
+.stamp.taken { background: #fbe7a6; color: #9a6a00; } .stamp.done { background: #cdeed9; color: #217848; } .stamp.failed { background: #f5d0cc; color: #a12d24; }
+
+/* 年代記 */
+.chron { display: grid; gap: 0; }
+.chron div { display: grid; grid-template-columns: 4.2em 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.chron span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.news-item { font-size: 14px; display: grid; gap: 0; }
+.news-item b { color: var(--accent); font-size: 12px; }
+
+/* ---------- 題と世界づくり ---------- */
+.scroll { height: 100%; overflow-y: auto; }
+.title { padding-block: 36px 40px; display: grid; gap: 24px; }
+.title h1 { font-size: clamp(38px, 9vw, 56px); font-weight: 900; margin: 0; letter-spacing: 0.04em; }
+.title .tag { margin: -14px 0 0; color: var(--muted); }
+.note-ai { background: var(--warn-soft); color: var(--fg); border-radius: 16px; padding: 10px 14px; font-size: 14px; }
+.lbl { font-size: 13px; font-weight: 900; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.06em; }
+.modes { display: grid; gap: 12px; }
+.mode { display: flex; gap: 14px; align-items: center; text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 16px; box-shadow: var(--shadow); }
+.mode:hover { border-color: var(--accent); }
+.mode .ico { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; flex: none; }
+.mode .ico svg { width: 26px; height: 26px; }
+.mode b { font-size: 17px; display: block; }
+.mode small { color: var(--muted); font-size: 13px; line-height: 1.6; display: block; }
+.saves { display: grid; gap: 8px; }
+.save { display: flex; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px 14px; }
+.save .mid { flex: 1; min-width: 0; }
+.save .mid b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.save .mid small { color: var(--muted); font-size: 12px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 14px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.setup { padding-block: 20px 40px; display: grid; gap: 16px; }
+.setup h2 { font-size: 24px; font-weight: 900; margin: 0; }
+.setup .lead { margin: 0; color: var(--muted); font-size: 14px; }
+.fld { display: grid; gap: 6px; }
+.fld label { font-weight: 700; font-size: 14px; }
+.fld small { color: var(--muted); font-size: 12px; }
+.fld input, .fld textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.fld textarea { min-height: 96px; resize: vertical; }
+.status { font-size: 14px; color: var(--muted); }
+.status.err { color: var(--bad); }
 .hint { font-size: 12px; color: var(--muted); }
 
-@media (max-width: 1000px) {
-  .tabs { display: flex; }
-  .layout { grid-template-columns: minmax(0, 1fr); }
-  .layout > section { display: none; }
-  .layout[data-tab="story"] > .story { display: flex; }
-  .layout[data-tab="self"] > .left { display: grid; }
-  .layout[data-tab="world"] > .right { display: grid; }
+@media (min-width: 900px) {
+  .sheet { left: 8px; right: 8px; }
 }
-@media (max-width: 1000px) {
-  .sugg { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
-  .sugg button { white-space: nowrap; flex: none; }
-  .inputrow textarea { min-height: 44px; }
-}
-@media (prefers-reduced-motion: reduce) { .dot { animation: none; } .meter i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .sheet { animation: none; } .dots i { animation: none; } .bar i { transition: none; } }
 </style>
 
 <div class="app" id="app"></div>
 
 <script>
 (() => {
-  // ---------- 状態 ----------
-  const SAVE_KEY = 'banshoroku.saves.v1';
-  let sample = null;
-  let aiChecked = false;
-  let G = null;           // 遊んでいる世界
-  let undoSnap = null;    // ひとつ前の状態（やり直し用）
-  let busy = false;
-  let ctl = null;
-  let tab = 'story';
+  // ================= 基本 =================
+  const SAVE_KEY = 'banshoroku.saves.v2';
+  const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
-
-  const TRAITS = [
-    ['aggression', '好戦'], ['diplomacy', '協調'], ['cunning', '謀略'],
-    ['mercy', '慈悲'], ['ambition', '野心'], ['honor', '信義'],
-  ];
+  const TRAITS = [['aggression', '好戦'], ['diplomacy', '協調'], ['cunning', '謀略'], ['mercy', '慈悲'], ['ambition', '野心'], ['honor', '信義']];
+  const TIERS = { quick: '速い', default: '標準', complex: 'じっくり' };
+  const PACES = { auto: 'おまかせ', slow: 'ゆっくり（場面ごと）', fast: '速い（日・週単位）' };
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const num = (v, d = 0) => (typeof v === 'number' && isFinite(v) ? v : (isFinite(+v) && v !== '' && v !== null ? +v : d));
+  const num = (v, d = 0) => (typeof v === 'number' && isFinite(v) ? v : v !== '' && v !== null && v !== undefined && isFinite(+v) ? +v : d);
   const str = (v, d = '') => (typeof v === 'string' ? v : v == null ? d : String(v));
+  const arr = (v) => (Array.isArray(v) ? v : []);
   const esc = (s) => str(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  // ---------- アイコン ----------
+  const P = {
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+    chart: '<path d="M4 20h16"/><path d="M7 16V10"/><path d="M11 16V5"/><path d="M15 16v-4"/><path d="M19 16V8"/>',
+    people: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 3-5 5.5-5s4.9 1.8 5.5 5"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6"/><path d="M17.5 14.3c1.7.6 2.8 2.1 3.1 4.2"/>',
+    chat: '<path d="M4 5h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3v-3H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" transform="translate(1 0)"/><path d="M19 9h1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-1v3l-4-3h-3"/>',
+    wallet: '<path d="M4 7h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11"/><path d="M20 12h-4a1.5 1.5 0 0 0 0 3h4"/>',
+    bag: '<path d="M6 8h12l-1 12H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/><path d="M9 13h6"/>',
+    board: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/>',
+    book: '<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    left: '<path d="M14 6l-6 6 6 6"/>',
+    right: '<path d="M10 6l6 6-6 6"/>',
+    redo: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+    pen: '<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
+    send: '<path d="M4 12l16-8-6 16-2.5-6.5z"/><path d="M11.5 13.5L20 4"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+    bulb: '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+    expand: '<path d="M14 4h6v6"/><path d="M20 4l-7 7"/><path d="M10 20H4v-6"/><path d="M4 20l7-7"/>',
+    shrink: '<path d="M4 14h6v6"/><path d="M10 14l-7 7"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/>',
+    minus: '<path d="M5 12h14"/>',
+    bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
+    arrowR: '<path d="M5 12h14"/><path d="M13 6l6 6-6 6"/>',
+    rewind: '<path d="M11 18l-7-6 7-6z"/><path d="M20 18l-7-6 7-6z"/>',
+    gauge: '<path d="M4 18a8 8 0 1 1 16 0"/><path d="M12 14l4-4"/>',
+    up: '<path d="M7 17L17 7"/><path d="M9 7h8v8"/>',
+    down: '<path d="M17 7L7 17"/><path d="M15 17H7V9"/>',
+    globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
+    crown: '<path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/>',
+    spark: '<path d="M12 3v4"/><path d="M12 17v4"/><path d="M3 12h4"/><path d="M17 12h4"/><path d="M6 6l2.5 2.5"/><path d="M15.5 15.5L18 18"/><path d="M18 6l-2.5 2.5"/><path d="M8.5 15.5L6 18"/>',
+    refresh: '<path d="M20 12a8 8 0 0 1-14.3 4.9"/><path d="M4 12A8 8 0 0 1 18.3 7.1"/><path d="M18 3v4h-4"/><path d="M6 21v-4h4"/>',
+  };
+  const ic = (n, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[n] || ''}</svg>`;
+
+  // 名前から決まる色のアバター
+  function avatar(name, kind, cls = '') {
+    let h = 0;
+    for (const ch of str(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const hue = h % 360;
+    const sq = /国|組織|同盟|団|家|軍|会|校|教/.test(str(kind)) ? ' sq' : '';
+    return `<span class="avatar${sq} ${cls}" style="background:linear-gradient(145deg,hsl(${hue} 55% 52%),hsl(${(hue + 40) % 360} 50% 32%))">${esc([...str(name)][0] || '？')}</span>`;
+  }
+
+  function money(v, w) {
+    const n = Math.round(num(v, 0));
+    const s = Math.abs(n).toLocaleString('ja-JP');
+    const sign = n < 0 ? '−' : '';
+    return w && w.symbol ? `${sign}${w.symbol}${s}` : `${sign}${s}${w ? w.unit || '' : ''}`;
+  }
 
   // ---------- 保存 ----------
-  function loadSaves() {
-    try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); } catch { return []; }
+  function loadSaves() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); } catch { return []; } }
+  function writeSaves(list) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); } catch { /* 保存できない環境 */ } }
+  function save() {
+    if (!S.G) return;
+    S.G.updated = Date.now();
+    writeSaves([S.G, ...loadSaves().filter((s) => s.id !== S.G.id)].slice(0, 8));
   }
-  function writeSaves(list) {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); } catch { /* 保存できない環境 */ }
-  }
-  function saveGame() {
-    if (!G) return;
-    G.updated = Date.now();
-    const list = loadSaves().filter((s) => s.id !== G.id);
-    list.unshift(G);
-    writeSaves(list.slice(0, 8));
-  }
-  function deleteSave(id) { writeSaves(loadSaves().filter((s) => s.id !== id)); }
 
-  // ---------- AI の準備 ----------
+  // ---------- AI ----------
   (async () => {
-    try { sample = window.claude && window.claude.use ? await window.claude.use('sample') : null; } catch { sample = null; }
-    aiChecked = true;
-    if (!G) renderTitle();
+    try { S.sample = window.claude && window.claude.use ? await window.claude.use('sample') : null; } catch { S.sample = null; }
+    S.aiChecked = true;
+    if (!S.G) renderTitle();
   })();
-
   const AI_ERR = {
-    not_granted: 'AI の利用が許可されませんでした。この画面では物語を進められません。',
+    not_granted: 'AI の利用が許可されませんでした。',
     sampling_disabled: 'このアカウントでは AI を使えません。',
-    rate_limited: 'AI の利用が混み合っているか、利用上限に達しました。少し時間をおいて、もう一度送ってください。',
+    rate_limited: 'AI が混み合っているか、利用上限に達しました。少し待ってからもう一度どうぞ。',
     session_expired: 'ログインが切れました。claude.ai にログインし直してください。',
-    refused: 'AI がこの行動の処理を断りました。言い方や内容を変えてみてください。',
-    invalid_json: 'AI の返事をうまく読み取れませんでした。もう一度送ってください。',
-    empty_completion: 'AI から返事がありませんでした。もう一度送ってください。',
+    refused: 'AI がこの内容の処理を断りました。言い方を変えてみてください。',
+    invalid_json: 'AI の返事をうまく読み取れませんでした。もう一度どうぞ。',
+    empty_completion: 'AI から返事がありませんでした。もう一度どうぞ。',
     prompt_too_large: '記録が長くなりすぎました。新しい世界で始め直してください。',
-    upstream_error: '通信が途切れました。もう一度送ってください。',
+    upstream_error: '通信が途切れました。もう一度どうぞ。',
   };
   const aiMsg = (e) => AI_ERR[e && e.code] || AI_ERR.upstream_error;
+  const tierOf = () => (S.G && S.G.settings && S.G.settings.tier) || 'default';
 
-  // ---------- 見本の世界: 国を率いる ----------
+  // ================= 見本の世界 =================
+  function blankTraits() { const t = {}; TRAITS.forEach(([k]) => (t[k] = 50)); return t; }
   function presetNation() {
     return {
-      id: uid(), v: 1, mode: 'nation', created: Date.now(), updated: Date.now(),
+      id: uid(), v: 2, mode: 'nation', created: Date.now(), updated: Date.now(),
       title: 'アルディア大陸記',
       premise: '剣と火薬が並び立つ架空の大陸アルディア。北の大帝国が膨張を続け、小国はのみ込まれるか、手を組むか、知恵で生き延びるかを迫られている。',
       role: '小国ヴェルナ公国の若き公主。先代の急死で位を継いだばかりで、家臣の信も国力も心もとない。',
       goal: '帝国にのみ込まれずに生き延び、やがて大陸の行く末を左右する国にすること。',
-      date: '大陸暦812年 春', turn: 0,
+      date: '大陸暦812年 春・1日目', turn: 0,
       stats: [
-        { key: 'treasury', name: '国庫', value: 50, min: 0, max: 200, desc: '使えるお金。軍・工事・買収・援助に使う。尽きると支持と安定が崩れる。' },
         { key: 'military', name: '軍事力', value: 30, min: 0, max: 100, desc: '兵の数と練度。上げるには金と時間がかかる。' },
-        { key: 'support', name: '民の支持', value: 55, min: 0, max: 100, desc: '民の支持。0 になると反乱が起きる。', fatal: true },
-        { key: 'stability', name: '安定度', value: 60, min: 0, max: 100, desc: '宮廷と国内の安定。0 になると政変で失脚する。', fatal: true },
+        { key: 'support', name: '民の支持', value: 55, min: 0, max: 100, desc: '0 になると反乱が起きる。', fatal: true },
+        { key: 'stability', name: '安定度', value: 60, min: 0, max: 100, desc: '宮廷と国内の安定。0 で政変。', fatal: true },
         { key: 'tech', name: '技術', value: 25, min: 0, max: 100, desc: '産業・兵器・学問の水準。' },
         { key: 'reputation', name: '外交評判', value: 50, min: 0, max: 100, desc: '諸国からの信用。約束を破ると下がる。' },
+        { key: 'intel', name: '諜報', value: 20, min: 0, max: 100, desc: '他国の動きを知る力。' },
+      ],
+      profile: [
+        { label: '称号', value: 'ヴェルナ公主' }, { label: '年齢', value: '19歳' }, { label: '後見', value: '宰相ベルナルド' },
+        { label: '婚姻', value: '未婚' }, { label: '領土', value: '3州' }, { label: '才覚', value: '未知数' },
+      ],
+      wallet: { unit: '金貨', symbol: '', balance: 1200, history: [{ label: '先代から引き継いだ国庫', amount: 1200, date: '大陸暦812年 春' }] },
+      items: [
+        { name: '公主の印章', icon: '🔏', desc: '公国の正式な命令に押す印。これがあれば勅命を出せる。' },
+        { name: '先代の地図', icon: '🗺️', desc: '先代が書き込みを残した大陸の地図。いくつかの抜け道が記されている。' },
+      ],
+      quests: [
+        { id: 'q1', title: '東の村を荒らす盗賊団', desc: '国境の村が夜ごと襲われている。民は公主の対応を見ている。', client: '東部の村長', reward: '民の支持', status: 'open' },
+        { id: 'q2', title: '帝国使節の歓待', desc: '三日後に帝国の使者が来る。失礼があれば口実を与える。', client: '宰相ベルナルド', reward: '外交評判', status: 'open' },
+        { id: 'q3', title: '新式銃の試作', desc: '商人同盟の技師が、資金さえあれば新しい銃を作れると言う。', client: 'ミレーヌの技師', reward: '技術', status: 'open' },
       ],
       entities: [
-        { id: 'e1', name: 'ガルザ帝国', kind: '国', relation: -20, power: 85, attitude: '値踏み', desc: '北の大国。老皇帝ヴォルグは領土拡張に執着し、小国を順に従えている。' },
-        { id: 'e2', name: 'ミレーヌ商業同盟', kind: '国', relation: 10, power: 55, attitude: '様子見', desc: '西の都市連合。金と交易路がすべて。儲かる側につく。' },
-        { id: 'e3', name: 'オルト王国', kind: '国', relation: 0, power: 40, attitude: '対抗心', desc: '東の同じくらいの国。若き王子レオンは野心家で、ヴェルナの領地を狙うことも組むこともありうる。' },
-        { id: 'e4', name: '聖サリエ教国', kind: '国', relation: 20, power: 50, attitude: '好意的', desc: '南の宗教国家。秩序と信仰を重んじ、乱暴な国を嫌う。' },
-        { id: 'e5', name: '宰相ベルナルド', kind: '人物', relation: 40, power: 45, attitude: '慎重', desc: '先代から仕える老臣。慎重な和平派で、若い主を試すように見ている。' },
-        { id: 'e6', name: '将軍カイラ', kind: '人物', relation: 30, power: 50, attitude: '血気', desc: '国軍の若き将。主戦派で、弱腰な主には従わない。' },
+        { id: 'e1', name: 'ガルザ帝国', kind: '国', relation: -20, power: 85, attitude: '値踏み', bond: '宗主気取り', mood: '尊大', desc: '北の大国。老皇帝ヴォルグは領土拡張に執着している。' },
+        { id: 'e2', name: 'ミレーヌ商業同盟', kind: '同盟', relation: 10, power: 55, attitude: '様子見', bond: '取引相手', mood: '計算高い', desc: '西の都市連合。儲かる側につく。' },
+        { id: 'e3', name: '王子レオン', kind: '人物', relation: 0, power: 45, attitude: '対抗心', bond: '隣国の王子', mood: '挑発的', desc: '東のオルト王国の王子。野心家で、敵にも味方にもなりうる。' },
+        { id: 'e4', name: '聖サリエ教国', kind: '国', relation: 20, power: 50, attitude: '好意的', bond: '信仰の友', mood: '穏やか', desc: '南の宗教国家。乱暴な国を嫌う。' },
+        { id: 'e5', name: '宰相ベルナルド', kind: '人物', relation: 40, power: 45, attitude: '慎重', bond: '後見人', mood: '心配', desc: '先代から仕える老臣。慎重な和平派。' },
+        { id: 'e6', name: '将軍カイラ', kind: '人物', relation: 30, power: 50, attitude: '血気', bond: '家臣', mood: '苛立ち', desc: '国軍の若き将。主戦派で、弱腰な主には従わない。' },
       ],
-      traits: { aggression: 50, diplomacy: 50, cunning: 50, mercy: 50, ambition: 50, honor: 50 },
-      perception: '新しい公主がどんな人物か、大陸はまだ知らない。',
-      chronicle: [], news: [], log: [],
-      suggestions: ['宰相と将軍を呼び、国の現状を報告させる', '帝国に使者を送り、即位の挨拶と贈り物を届ける', 'オルト王国の王子レオンに秘密の会談を持ちかける'],
+      traits: blankTraits(), perception: '新しい公主がどんな人物か、大陸はまだ知らない。',
+      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', pace: 'auto' },
+      suggestions: ['宰相と将軍を呼び、国の現状を報告させる', '帝国の使者を迎える準備を整える', '王子レオンに秘密の会談を持ちかける'],
       status: 'playing',
-      intro: '大陸暦812年、春。\n先代公主の急死から十日。あなたは冠を受け継ぎ、ヴェルナ公国の玉座に座った。\n\n北からはガルザ帝国の使者が「祝意」を携えてやって来るという。東のオルト王国は国境に兵を集め、西の商人たちは金貨を数えながら成り行きを見ている。\n宰相ベルナルドは静かに、将軍カイラは苛立たしげに、あなたの最初の言葉を待っている。',
+      intro: '先代公主の急死から十日。あなたは冠を受け継ぎ、ヴェルナ公国の玉座に座った。\n\n北からはガルザ帝国の使者が「祝意」を携えてやって来るという。東のオルト王国では王子レオンが国境に兵を集め、西の商人たちは金貨を数えながら成り行きを見ている。\n\n宰相ベルナルドは静かに、将軍カイラは苛立たしげに、あなたの最初の言葉を待っている。',
     };
   }
 
-  // ---------- 画面: 題 ----------
+  // ================= 題 =================
+  const MODE_STYLE = {
+    nation: ['crown', 'var(--t-time)', 'var(--t-time-fg)'],
+    work: ['spark', 'var(--t-people)', 'var(--t-people-fg)'],
+    custom: ['globe', 'var(--t-chat)', 'var(--t-chat-fg)'],
+  };
   function renderTitle() {
-    G = null;
+    S.G = null; S.sheet = null; S.variants = null;
     const saves = loadSaves();
-    const aiOk = !!sample;
-    app.innerHTML = `
-      <div class="title">
-        <div class="brand"><h1>万象録</h1><p>あなたの一手に、世界が答える。</p></div>
-        ${aiChecked && !aiOk ? `<div class="ai-note">この画面では AI を呼び出せません。claude.ai でこのページを開くと遊べます。</div>` : ''}
-        <div>
-          <p class="section-label">新しい世界</p>
-          <div class="modes">
-            <button class="mode" data-mode="nation"><span class="k">国を率いる</span><h3>アルディア大陸記</h3><p>小国の若き公主として、大帝国・商人の同盟・野心家の隣国と渡り合う。外交も戦も謀略も、文章で命じる。</p></button>
-            <button class="mode" data-mode="work"><span class="k">作品世界に入る</span><h3>好きな漫画・物語の中へ</h3><p>作品名とあなたの登場人物を書けば、その世界に新しい人物として入り込める。原作の人物たちがあなたに反応する。</p></button>
-            <button class="mode" data-mode="custom"><span class="k">自由な世界</span><h3>設定から世界を作る</h3><p>時代・舞台・立場を文章で書くと、その世界と数値・勢力を AI が組み立てる。</p></button>
-          </div>
-        </div>
-        ${saves.length ? `<div><p class="section-label">続きから</p><div class="saves">${saves.map((s) => `
-          <div class="save"><div class="info"><b>${esc(s.title)}</b><span>${esc(s.date)}・${s.turn}手目${s.status === 'ended' ? '・終幕' : ''}</span></div>
-          <button class="btn primary" data-load="${esc(s.id)}">開く</button><button class="btn ghost danger" data-del="${esc(s.id)}">消す</button></div>`).join('')}</div></div>` : ''}
-        <p class="hint">遊ぶたびに、あなたの Claude の利用枠を使います（1手ごとに1回）。記録はこのブラウザにだけ保存されます。</p>
-      </div>`;
-    app.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
-      const m = b.dataset.mode;
-      if (m === 'nation') { G = presetNation(); G.log.push({ t: 'intro', text: G.intro }); saveGame(); renderGame(); }
-      else renderSetup(m);
-    }));
-    app.querySelectorAll('[data-load]').forEach((b) => b.addEventListener('click', () => {
+    const modeBtn = (m, t, d) => `<button class="mode" data-mode="${m}"><span class="ico" style="background:${MODE_STYLE[m][1]};color:${MODE_STYLE[m][2]}">${ic(MODE_STYLE[m][0])}</span><span><b>${t}</b><small>${d}</small></span></button>`;
+    app.innerHTML = `<div class="scroll"><div class="title pad">
+      <h1>万象録</h1><p class="tag">あなたの一手に、世界が答える。</p>
+      ${S.aiChecked && !S.sample ? '<div class="note-ai">この画面では AI を呼び出せません。claude.ai でこのページを開くと遊べます。</div>' : ''}
+      <div><p class="lbl">新しい世界</p><div class="modes">
+        ${modeBtn('nation', '国を率いる ― アルディア大陸記', '小国の若き公主として、大帝国・商人の同盟・野心家の王子と渡り合う。')}
+        ${modeBtn('work', '作品世界に入る', '好きな漫画や物語に、新しい登場人物として入り込む。原作の人物があなたに反応する。')}
+        ${modeBtn('custom', '自由な世界', '時代・舞台・立場を書くと、数値や人物ごと世界を組み立てる。')}
+      </div></div>
+      ${saves.length ? `<div><p class="lbl">続きから</p><div class="saves">${saves.map((s) => `<div class="save">${avatar(s.title, '国')}<div class="mid"><b>${esc(s.title)}</b><small>${esc(s.date)}・${s.turn}手目${s.status === 'ended' ? '・終幕' : ''}</small></div>
+        <button class="btn primary" data-load="${esc(s.id)}">開く</button><button class="btn danger" data-del="${esc(s.id)}">消す</button></div>`).join('')}</div></div>` : ''}
+      <p class="hint">1手ごと・1回の会話ごとに、あなたの Claude の利用枠を使います。記録はこのブラウザにだけ保存されます。</p>
+    </div></div>`;
+    app.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => {
+      if (b.dataset.mode === 'nation') { S.G = presetNation(); S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date }); save(); renderGame(); }
+      else renderSetup(b.dataset.mode);
+    });
+    app.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => {
       const s = loadSaves().find((x) => x.id === b.dataset.load);
-      if (s) { G = s; undoSnap = null; renderGame(); }
-    }));
-    app.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', () => {
-      if (b.dataset.armed) { deleteSave(b.dataset.del); renderTitle(); }
+      if (s) { S.G = s; S.variants = null; renderGame(); }
+    });
+    app.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => {
+      if (b.dataset.armed) { writeSaves(loadSaves().filter((x) => x.id !== b.dataset.del)); renderTitle(); }
       else { b.dataset.armed = '1'; b.textContent = '本当に消す'; }
-    }));
+    });
   }
 
-  // ---------- 画面: 世界づくり ----------
+  // ================= 世界づくり =================
   function renderSetup(mode) {
     const work = mode === 'work';
-    app.innerHTML = `
-      <div class="setup">
-        <button class="btn ghost" id="back" style="justify-self:start">← 戻る</button>
-        <h2>${work ? '作品世界に入る' : '自由な世界を作る'}</h2>
-        <p class="lead">${work
-          ? '入りたい作品と、あなたが演じる新しい登場人物を書いてください。原作の人物や設定はそのままに、あなたが加わった物語が始まります。'
-          : '世界の設定と、あなたの立場を書いてください。数値・勢力・人物は AI が組み立てます。'}</p>
-        ${work ? `
-        <div class="field"><label for="f-work">作品名</label><input id="f-work" placeholder="例: 好きな漫画やアニメ、小説のタイトル" maxlength="80"></div>
-        <div class="field"><label for="f-char">あなたの登場人物</label><textarea id="f-char" maxlength="600" placeholder="名前・立場・能力・性格など。例: 名前はアキラ。腕は立つが記憶を失った旅の剣士。"></textarea></div>
-        <div class="field"><label for="f-scene">始めたい場面（任意）</label><input id="f-scene" maxlength="200" placeholder="例: 物語の序盤、主人公たちと出会う直前"><small>空欄なら AI が決めます。</small></div>
-        ` : `
-        <div class="field"><label for="f-premise">世界の設定</label><textarea id="f-premise" maxlength="1200" placeholder="例: 魔法が電気の代わりになった1920年代の東京。財閥と魔導師ギルドが対立している。"></textarea></div>
-        <div class="field"><label for="f-char">あなたの立場</label><textarea id="f-char" maxlength="600" placeholder="例: 没落した魔導師の家を継いだ若い当主。"></textarea></div>
-        `}
-        <div class="row"><button class="btn primary" id="go">世界を作る</button><button class="btn" id="stop" hidden>やめる</button><span class="status" id="st"></span></div>
-      </div>`;
-    document.getElementById('back').onclick = () => { ctl && ctl.abort(); renderTitle(); };
-    const st = document.getElementById('st');
-    const go = document.getElementById('go');
-    const stop = document.getElementById('stop');
-    stop.onclick = () => ctl && ctl.abort();
-    go.onclick = async () => {
-      const char = str(document.getElementById('f-char').value).trim();
-      const inputs = work
-        ? { work: document.getElementById('f-work').value.trim(), char, scene: document.getElementById('f-scene').value.trim() }
-        : { premise: document.getElementById('f-premise').value.trim(), char };
-      if ((work && !inputs.work) || (!work && !inputs.premise) || !char) {
-        st.className = 'status err'; st.textContent = work ? '作品名と登場人物を書いてください。' : '世界の設定と立場を書いてください。'; return;
-      }
-      if (!sample) { st.className = 'status err'; st.textContent = 'この画面では AI を呼び出せません。claude.ai で開いてください。'; return; }
-      go.disabled = true; stop.hidden = false; st.className = 'status'; st.textContent = '世界を組み立てています…（30秒〜1分ほど）';
-      ctl = new AbortController();
+    app.innerHTML = `<div class="scroll"><div class="setup pad">
+      <button class="btn" id="back" style="justify-self:start">← 戻る</button>
+      <h2>${work ? '作品世界に入る' : '自由な世界を作る'}</h2>
+      <p class="lead">${work ? '入りたい作品と、あなたが演じる新しい登場人物を書いてください。原作の人物や設定はそのままに、あなたが加わった物語が始まります。' : '世界の設定と、あなたの立場を書いてください。数値・人物・依頼・持ち物は AI が組み立てます。'}</p>
+      ${work ? `<div class="fld"><label for="f-work">作品名</label><input id="f-work" maxlength="80" placeholder="例: 好きな漫画やアニメ、小説のタイトル"></div>
+        <div class="fld"><label for="f-char">あなたの登場人物</label><textarea id="f-char" maxlength="600" placeholder="名前・立場・能力・性格など"></textarea></div>
+        <div class="fld"><label for="f-scene">始めたい時期・場面（任意）</label><input id="f-scene" maxlength="200" placeholder="例: 物語の序盤、主人公たちと出会う前"><small>空欄なら AI が決めます。</small></div>`
+        : `<div class="fld"><label for="f-premise">世界の設定</label><textarea id="f-premise" maxlength="1200" placeholder="例: 魔法が電気の代わりになった1920年代の東京。財閥と魔導師ギルドが対立している。"></textarea></div>
+        <div class="fld"><label for="f-char">あなたの立場</label><textarea id="f-char" maxlength="600" placeholder="例: 没落した魔導師の家を継いだ若い当主"></textarea></div>`}
+      <div class="row" style="flex-wrap:wrap"><button class="btn primary" id="go">世界を作る</button><button class="btn" id="stop" hidden>やめる</button><span class="status" id="st"></span></div>
+    </div></div>`;
+    const $ = (id) => document.getElementById(id);
+    $('back').onclick = () => { S.ctl && S.ctl.abort(); renderTitle(); };
+    $('stop').onclick = () => S.ctl && S.ctl.abort();
+    $('go').onclick = async () => {
+      const char = $('f-char').value.trim();
+      const inp = work ? { work: $('f-work').value.trim(), char, scene: $('f-scene').value.trim() } : { premise: $('f-premise').value.trim(), char };
+      const st = $('st');
+      if ((work && !inp.work) || (!work && !inp.premise) || !char) { st.className = 'status err'; st.textContent = work ? '作品名と登場人物を書いてください。' : '設定と立場を書いてください。'; return; }
+      if (!S.sample) { st.className = 'status err'; st.textContent = 'この画面では AI を呼び出せません。claude.ai で開いてください。'; return; }
+      $('go').disabled = true; $('stop').hidden = false; st.className = 'status'; st.textContent = '世界を組み立てています…（30秒〜1分ほど）';
+      S.ctl = new AbortController();
       try {
-        const w = await sample.json(genPrompt(work ? 'work' : 'custom', inputs), { signal: ctl.signal });
-        G = normalizeWorld(w, work ? 'work' : 'custom', inputs);
-        G.log.push({ t: 'intro', text: G.intro });
-        saveGame();
-        renderGame();
+        const w = await S.sample.json(genPrompt(work ? 'work' : 'custom', inp), { signal: S.ctl.signal });
+        S.G = normalizeWorld(w, work ? 'work' : 'custom', inp);
+        S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
+        save(); renderGame();
       } catch (e) {
-        if (e && e.code === 'cancelled') { st.textContent = ''; }
-        else { st.className = 'status err'; st.textContent = aiMsg(e); }
-        go.disabled = false; stop.hidden = true;
+        if (!(e && e.code === 'cancelled')) { st.className = 'status err'; st.textContent = aiMsg(e); } else st.textContent = '';
+        $('go').disabled = false; $('stop').hidden = true;
       }
     };
   }
 
   function genPrompt(mode, inp) {
     const head = mode === 'work'
-      ? `あなたは対話型シミュレーションゲームのゲームマスターです。プレイヤーは既存の作品「${inp.work}」の世界に、原作にいない新しい登場人物として入ります。
-作品の設定・人物の性格・世界のルールは、あなたの知っている原作に忠実にしてください。原作の台詞や文章を長く引き写さず、自分の言葉で書いてください。作品をよく知らない場合は、知っている範囲で無理なく組み立ててください。
+      ? `あなたは対話型シミュレーションゲームのゲームマスター。プレイヤーは既存の作品「${inp.work}」の世界に、原作にいない新しい登場人物として入る。
+作品の設定・人物の性格・世界のルールは、あなたの知る原作に忠実に。原作の台詞や文章を長く引き写さず、自分の言葉で書く。よく知らない作品なら、知っている範囲で無理なく組み立てる。
 プレイヤーの人物: ${inp.char}
-始める場面: ${inp.scene || 'あなたが選ぶ（物語が動き出す、印象的な場面）'}`
-      : `あなたは対話型シミュレーションゲームのゲームマスターです。プレイヤーの書いた設定から、遊べる世界を組み立てます。
+始める時期・場面: ${inp.scene || 'あなたが選ぶ（物語が動き出す印象的な場面）'}`
+      : `あなたは対話型シミュレーションゲームのゲームマスター。プレイヤーの書いた設定から、遊べる世界を組み立てる。
 世界の設定: ${inp.premise}
 プレイヤーの立場: ${inp.char}`;
     return `${head}
 
-この世界の「最初の状態」を作ってください。日本語で書き、次の形の JSON だけを返してください。
+この世界の「最初の状態」を日本語で作り、次の形の JSON だけを返す。
 {
   "title": "世界の題（15字以内）",
   "premise": "世界の要約（120字以内）",
   "role": "プレイヤーの立場（80字以内）",
-  "goal": "この物語でプレイヤーが目指しうること（60字以内）",
-  "date": "物語内の時を表す言葉（例: 第一話の朝、大陸暦812年 春）",
-  "intro": "冒頭の場面。プレイヤーの人物が置かれた状況を、情景と人物の気配が伝わるように二人称で（250〜400字）",
-  "stats": [ {"key": "英小文字の識別子", "name": "数値の名前", "value": 50, "min": 0, "max": 100, "desc": "何を表すか（40字以内）", "fatal": true か false} ],
-  "entities": [ {"name": "人物や勢力の名前", "kind": "人物 / 組織 / 国 など", "relation": -100〜100 の整数（プレイヤーへの好感）, "power": 0〜100 の整数（影響力・強さ）, "attitude": "今の態度（6字以内）", "desc": "どんな存在か（60字以内）"} ],
+  "goal": "プレイヤーが目指しうること（60字以内）",
+  "date": "物語内の時（例: 2006年9月・1日目、大陸暦812年 春・1日目）",
+  "intro": "冒頭の場面。情景と人物の気配が伝わるように二人称で（250〜400字）",
+  "stats": [{"key": "英小文字の識別子", "name": "数値の名前", "value": 50, "min": 0, "max": 100, "desc": "何を表すか（30字以内）", "fatal": false}],
+  "profile": [{"label": "項目（等級・出自・才能・所属・関係など）", "value": "短い言葉（12字以内）"}],
+  "wallet": {"unit": "通貨の名前（円・金貨など）", "symbol": "記号（¥ など。無ければ空文字）", "balance": 整数},
+  "items": [{"name": "持ち物", "icon": "絵文字1つ", "desc": "説明（40字以内）"}],
+  "quests": [{"title": "依頼・仕事の名前", "desc": "内容（50字以内）", "client": "依頼主", "reward": "報酬（金額か言葉）"}],
+  "entities": [{"name": "人物や勢力", "kind": "人物 / 組織 / 国 など", "relation": -100〜100（プレイヤーへの好感）, "power": 0〜100（影響力）, "attitude": "態度（6字以内）", "bond": "プレイヤーとの関係（8字以内）", "mood": "今の気分（8字以内）", "desc": "どんな存在か（60字以内）"}],
   "suggestions": ["最初の行動の例", "…", "…"]
 }
 決まり:
-- stats は 4〜6 個。この世界での生き残りと成功に関わるもの（例: 体力、気力、名声、所持金、仲間の信頼、勢力の兵力）。0 になると物語が終わるもの（体力・命など）は fatal を true に。
-- entities は 5〜8 個。${mode === 'work' ? '原作の主要人物や組織を中心に。プレイヤーとはまだ知り合いでない人物は relation を 0 付近に。' : '味方・ライバル・敵・中立をまぜる。'}
+- stats は 4〜6 個（体力・気力・名声・人脈・戦闘力など、この世界での生き残りと成功に関わる数値）。0 で物語が終わるもの（体力など）は fatal を true。お金は stats ではなく wallet に入れる。
+- profile は 4〜8 個。items は 1〜3 個。quests は 2〜3 個。
+- entities は 5〜8 個。${mode === 'work' ? '原作の主要人物や組織を中心に。まだ知り合いでない人物は relation を 0 付近に。' : '味方・ライバル・敵・中立をまぜる。'}
 - suggestions はちょうど 3 つ。具体的で、性格の違う行動に。`;
   }
+
+  function normQuest(q, i) {
+    return { id: str(q.id) || 'q' + uid() + i, title: str(q.title, '依頼').slice(0, 40), desc: str(q.desc).slice(0, 100), client: str(q.client, '不明').slice(0, 24), reward: str(q.reward).slice(0, 24), status: ['open', 'taken', 'done', 'failed'].includes(q.status) ? q.status : 'open' };
+  }
+  function normItem(it) { return { name: str(it.name, '何か').slice(0, 20), icon: [...str(it.icon, '📦')].slice(0, 2).join('') || '📦', desc: str(it.desc).slice(0, 80) }; }
 
   function normalizeWorld(w, mode, inp) {
     if (!w || typeof w !== 'object') throw { code: 'invalid_json' };
     const used = new Set();
-    let stats = (Array.isArray(w.stats) ? w.stats : []).slice(0, 6).map((s, i) => {
+    let stats = arr(w.stats).slice(0, 6).map((s, i) => {
       let key = str(s.key).toLowerCase().replace(/[^a-z0-9_]/g, '') || 's' + i;
       while (used.has(key)) key += '_';
       used.add(key);
-      const min = num(s.min, 0);
-      const max = Math.max(min + 1, num(s.max, 100));
-      return { key, name: str(s.name, key).slice(0, 12), value: clamp(num(s.value, 50), min, max), min, max, desc: str(s.desc).slice(0, 80), fatal: !!s.fatal };
+      const min = num(s.min, 0); const max = Math.max(min + 1, num(s.max, 100));
+      return { key, name: str(s.name, key).slice(0, 10), value: clamp(num(s.value, 50), min, max), min, max, desc: str(s.desc).slice(0, 60), fatal: !!s.fatal };
     });
-    if (stats.length < 2) stats = [
-      { key: 'health', name: '体力', value: 80, min: 0, max: 100, desc: '0 になると倒れる。', fatal: true },
-      { key: 'fame', name: '名声', value: 20, min: 0, max: 100, desc: '世の中での知られ方。' },
-    ];
-    const entities = (Array.isArray(w.entities) ? w.entities : []).slice(0, 8).map((e, i) => ({
-      id: 'e' + (i + 1), name: str(e.name, '名もなき者').slice(0, 24), kind: str(e.kind, '人物').slice(0, 8),
-      relation: clamp(Math.round(num(e.relation, 0)), -100, 100), power: clamp(Math.round(num(e.power, 50)), 0, 100),
-      attitude: str(e.attitude).slice(0, 10), desc: str(e.desc).slice(0, 100),
-    }));
-    const t = {};
-    TRAITS.forEach(([k]) => (t[k] = 50));
+    if (stats.length < 2) stats = [{ key: 'health', name: '体力', value: 80, min: 0, max: 100, desc: '0 になると倒れる。', fatal: true }, { key: 'fame', name: '名声', value: 20, min: 0, max: 100, desc: '世の中での知られ方。' }];
+    const wl = w.wallet && typeof w.wallet === 'object' ? w.wallet : {};
+    const date = str(w.date, 'はじまり').slice(0, 30);
+    const bal = Math.round(num(wl.balance, 0));
     return {
-      id: uid(), v: 1, mode, created: Date.now(), updated: Date.now(), source: inp,
-      title: str(w.title, inp.work || '新しい世界').slice(0, 30), premise: str(w.premise).slice(0, 300),
-      role: str(w.role, inp.char).slice(0, 200), goal: str(w.goal).slice(0, 120), date: str(w.date, 'はじまり').slice(0, 30), turn: 0,
-      stats, entities, traits: t, perception: 'あなたがどんな人物か、まだ誰も知らない。',
-      chronicle: [], news: [], log: [],
-      suggestions: (Array.isArray(w.suggestions) ? w.suggestions : []).slice(0, 3).map((s) => str(s).slice(0, 80)),
+      id: uid(), v: 2, mode, created: Date.now(), updated: Date.now(), source: inp,
+      title: str(w.title, inp.work || '新しい世界').slice(0, 30), premise: str(w.premise).slice(0, 300), role: str(w.role, inp.char).slice(0, 200),
+      goal: str(w.goal).slice(0, 120), date, turn: 0, stats,
+      profile: arr(w.profile).slice(0, 8).map((p) => ({ label: str(p.label).slice(0, 8), value: str(p.value).slice(0, 24) })).filter((p) => p.label),
+      wallet: { unit: str(wl.unit, '円').slice(0, 6), symbol: str(wl.symbol).slice(0, 2), balance: bal, history: bal ? [{ label: 'はじめの持ち金', amount: bal, date }] : [] },
+      items: arr(w.items).slice(0, 3).map(normItem),
+      quests: arr(w.quests).slice(0, 3).map(normQuest),
+      entities: arr(w.entities).slice(0, 8).map((e, i) => ({
+        id: 'e' + (i + 1), name: str(e.name, '名もなき者').slice(0, 20), kind: str(e.kind, '人物').slice(0, 8),
+        relation: clamp(Math.round(num(e.relation, 0)), -100, 100), power: clamp(Math.round(num(e.power, 50)), 0, 100),
+        attitude: str(e.attitude).slice(0, 10), bond: str(e.bond).slice(0, 12), mood: str(e.mood).slice(0, 12), desc: str(e.desc).slice(0, 100),
+      })),
+      traits: blankTraits(), perception: 'あなたがどんな人物か、まだ誰も知らない。',
+      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', pace: 'auto' },
+      suggestions: arr(w.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80)),
       status: 'playing', intro: str(w.intro, 'あなたの物語が始まる。'),
     };
   }
 
-  // ---------- 1 手の処理 ----------
-  function turnPrompt(action) {
-    const g = G;
-    const statsTxt = g.stats.map((s) => `- ${s.name}（key: ${s.key}）: ${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''} … ${s.desc}`).join('\n');
-    const entTxt = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜あなたへの好感 ${e.relation}｜力 ${e.power}｜態度「${e.attitude || '-'}」｜${e.desc}${e.note ? '｜最近: ' + e.note : ''}`).join('\n');
-    const trTxt = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
-    const chron = g.chronicle.slice(-16).join('\n') || '（まだない）';
-    const recent = g.log.filter((l) => l.t === 'res').slice(-2).map((l) => `［${l.turn}手目］${l.action}\n→ ${str(l.narrative).slice(0, 500)}`).join('\n\n') || str(g.intro).slice(0, 500);
-    const workRule = g.mode === 'work'
-      ? `\n- この世界は既存の作品「${str(g.source && g.source.work)}」が元。原作の設定や人物の性格を尊重しつつ、プレイヤーが加わったことで展開は原作から分かれてよい。原作の台詞や文章を長く引き写さない。`
-      : '';
-    return `あなたは対話型シミュレーションゲーム「万象録」のゲームマスター。プレイヤーの行動の結果と、世界の反応を決める。
-
-【世界】${g.title}
+  // ================= 世界の状態を文章に =================
+  function worldText(g, { short = false } = {}) {
+    const stats = g.stats.map((s) => `- ${s.name}（key:${s.key}）${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''}${short ? '' : ' … ' + s.desc}`).join('\n');
+    const prof = g.profile.map((p) => `${p.label}: ${p.value}`).join('／');
+    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${e.note ? '｜最近: ' + e.note : ''}`).join('\n');
+    const traits = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
+    const items = g.items.map((i) => i.name).join('、') || 'なし';
+    const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
+    return `【世界】${g.title}
 ${g.premise}
 【プレイヤー】${g.role}
 【目指すもの】${g.goal || '自由'}
 【現在】${g.date}（${g.turn + 1}手目）
-
-【数値】（ゲーム側が管理する。あなたは増減だけを決める）
-${statsTxt}
-
+【プロフィール】${prof || 'なし'}
+【所持金】${money(g.wallet.balance, g.wallet)}
+【持ち物】${items}
+【依頼】
+${quests}
+【数値】（ゲーム側が管理。あなたは増減だけ決める）
+${stats}
 【人物・勢力】
-${entTxt}
+${ents}
+【世界から見たプレイヤー】（0〜100、50が普通）${traits}／評判: ${g.perception}`;
+  }
 
-【世界から見たプレイヤー】（0〜100。50が普通）${trTxt}
-いまの評判: ${g.perception}
+  // ================= 1 手 =================
+  function turnPrompt(g, action) {
+    const chron = g.chronicle.slice(-16).join('\n') || '（まだない）';
+    const recent = g.log.filter((l) => l.t === 'res').slice(-2).map((l) => `［${l.turn}手目］${l.action}\n→ ${str(l.narrative).slice(0, 500)}`).join('\n\n') || str(g.intro).slice(0, 500);
+    const chats = Object.entries(g.chats || {}).map(([id, list]) => {
+      const e = g.entities.find((x) => x.id === id);
+      const last = arr(list).slice(-2).map((m) => `${m.role === 'me' ? 'プレイヤー' : e ? e.name : '相手'}「${str(m.text).slice(0, 60)}」`).join(' ');
+      return e && last ? `- ${e.name}との会話: ${last}` : '';
+    }).filter(Boolean).slice(-4).join('\n');
+    const pace = { auto: '行動の内容に合わせて自然に進める', slow: '場面単位でゆっくり（数時間程度）', fast: '日・週単位で速く' }[g.settings.pace || 'auto'];
+    const workRule = g.mode === 'work' ? `\n- この世界は既存の作品「${str(g.source && g.source.work)}」が元。原作の設定や人物の性格を尊重しつつ、プレイヤーが加わったことで展開は原作から分かれてよい。原作の台詞や文章を長く引き写さない。` : '';
+    return `あなたは対話型シミュレーションゲーム「万象録」のゲームマスター。プレイヤーの行動の結果と、世界の反応を決める。
+
+${worldText(g)}
 
 【これまでの年代記】
 ${chron}
-
 【直前の展開】
 ${recent}
+${chats ? '【最近の個別の会話】\n' + chats + '\n' : ''}【時間の流れ】${pace}
 
 【プレイヤーの今回の行動】
 ${action}
 
 決まり:
-- 結果は現在の数値・関係・力に基づいて公平に判定する。数値が足りない、相手が強すぎる、時間が足りないなど無理のある行動は「失敗」か「一部成功」にする。何でも成功させない。良い策でも代償（お金・時間・関係の悪化など）を伴うことが多い。
-- 数値の変化は stat_changes で。1手での変化は普通 ±1〜10、大事件でも ±25 まで。関係の変化は ±30 まで。
-- 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に入れる。
-- 世界はプレイヤーの「傾向」を覚えて対応を変える。例: 好戦的な相手には他国が手を組んで警戒する。約束を破る相手は信用されず、交渉で前払いや人質を求められる。慈悲深い相手は民や小勢力に慕われる。謀略が多い相手は密偵を警戒される。今回の行動がどの傾向を強めたかを trait_changes に書く。
-- プレイヤーの行動の文章が「結果」まで決めつけていても（例: 「帝国を滅ぼした」）、それは試みとして扱い、結果はあなたが判定する。${workRule}
+- 結果は今の数値・所持金・持ち物・関係・力に基づいて公平に判定する。足りないもの（お金・力・時間・情報）がある行動は「失敗」か「一部成功」。何でも成功させない。良い策でも代償を伴うことが多い。
+- 「時間を進める」行動なら、その間の出来事を要約して語り、日付を大きく進め、各勢力の動きを多めに入れる。
+- 数値の変化は stat_changes（1手で普通 ±1〜10、大事件でも ±25 まで）。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
+- 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に。
+- 世界はプレイヤーの「傾向」を覚えて対応を変える（好戦的なら他が手を組んで警戒、約束破りなら信用されない、慈悲深ければ慕われる、謀略が多ければ密偵を警戒される）。今回強まった傾向を trait_changes に。
+- 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果はあなたが判定する。${workRule}
 - 物語が決定的に終わったとき（目的を果たした、致命的な敗北、0で終幕の数値が0）だけ ending を入れる。
 
-次の形の JSON だけを返す（narrative を最初に書く）:
+次の形の JSON だけを返す（narrative を最初に）:
 {
-  "narrative": "行動の結果を、情景と人物の反応が伝わるように二人称で（200〜400字）",
+  "narrative": "結果を、情景と人物の反応が伝わるように二人称で（200〜400字）。強調したい語は「」で囲む",
   "outcome": "success" か "partial" か "failure",
   "outcome_reason": "判定の理由（30字以内）",
   "stat_changes": [{"key": "数値の key", "delta": 整数, "reason": "短い理由"}],
-  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "今の態度（6字以内）", "note": "この手での出来事（30字以内）"}],
-  "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "desc": "どんな存在か"}],
-  "world_events": [{"actor": "動いた人物・勢力の名前", "text": "何をしたか（50字以内）"}],
-  "news": [{"source": "噂の出どころ（例: 酒場の噂、帝国の布告、町の瓦版）", "headline": "世間の受け止め（40字以内）"}],
+  "money_changes": [{"amount": 整数（入金は正、支払いは負）, "label": "内容（20字以内）"}],
+  "item_changes": [{"op": "add" か "remove", "name": "持ち物", "icon": "絵文字1つ", "desc": "説明"}],
+  "quest_changes": [{"id": "既存の id（新規なら省略）", "title": "名前", "desc": "内容", "client": "依頼主", "reward": "報酬", "status": "open/taken/done/failed"}],
+  "profile_changes": [{"label": "項目", "value": "新しい値"}],
+  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "note": "この手での出来事（30字以内）"}],
+  "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "desc": "どんな存在か"}],
+  "world_events": [{"actor": "動いた人物・勢力", "text": "何をしたか（50字以内）"}],
+  "news": [{"source": "噂の出どころ", "headline": "世間の受け止め（40字以内）"}],
   "trait_changes": {"aggression": 整数, "diplomacy": 整数, "cunning": 整数, "mercy": 整数, "ambition": 整数, "honor": 整数},
   "perception": "世界がいまプレイヤーをどう見ているか（50字以内）",
-  "new_date": "この手の後の、物語内の時（時間が進むなら進める）",
-  "summary": "この手の出来事を年代記に残す一行（40字以内）",
-  "suggestions": ["次の行動の例を 3 つ。具体的で、性格の違うもの"],
-  "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末の文章（150字以内）"}
+  "new_date": "この手の後の物語内の時（例: 2006年9月・16日目）",
+  "summary": "年代記に残す一行（40字以内）",
+  "suggestions": ["次の行動の例を3つ。具体的で、性格の違うもの"],
+  "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末（150字以内）"}
 }
-trait_changes は各 -10〜10。new_entities・news は無ければ空の配列。`;
+使わない欄は空の配列。trait_changes は各 -10〜10。`;
   }
 
-  function applyResult(r, action) {
-    const g = G;
+  function applyResult(g, r, action) {
     const chips = [];
-    // 数値
-    (Array.isArray(r.stat_changes) ? r.stat_changes : []).forEach((c) => {
+    arr(r.stat_changes).forEach((c) => {
       const s = g.stats.find((x) => x.key === str(c.key) || x.name === str(c.key));
       if (!s) return;
-      const d = clamp(Math.round(num(c.delta, 0)), -25, 25);
-      if (!d) return;
       const before = s.value;
-      s.value = clamp(s.value + d, s.min, s.max);
-      if (s.value !== before) chips.push({ label: s.name, delta: s.value - before, reason: str(c.reason).slice(0, 40) });
+      s.value = clamp(s.value + clamp(Math.round(num(c.delta, 0)), -25, 25), s.min, s.max);
+      if (s.value !== before) chips.push({ label: s.name, delta: s.value - before });
     });
-    // 関係
-    (Array.isArray(r.entity_changes) ? r.entity_changes : []).forEach((c) => {
+    arr(r.money_changes).slice(0, 4).forEach((m) => {
+      let a = Math.round(num(m.amount, 0));
+      if (!a) return;
+      if (a < 0 && g.wallet.balance + a < 0) a = -g.wallet.balance;
+      if (!a) return;
+      g.wallet.balance += a;
+      g.wallet.history.unshift({ label: str(m.label, a > 0 ? '入金' : '支払い').slice(0, 30), amount: a, date: str(r.new_date, g.date).slice(0, 30) });
+      chips.push({ label: str(m.label, '所持金').slice(0, 12), delta: a, money: true });
+    });
+    g.wallet.history = g.wallet.history.slice(0, 40);
+    arr(r.item_changes).slice(0, 4).forEach((c) => {
+      const name = str(c.name).slice(0, 20);
+      if (!name) return;
+      if (c.op === 'remove') { const i = g.items.findIndex((x) => x.name === name); if (i >= 0) { g.items.splice(i, 1); chips.push({ label: '失った: ' + name, delta: -1, text: true }); } }
+      else if (!g.items.some((x) => x.name === name) && g.items.length < 24) { g.items.push(normItem(c)); chips.push({ label: '手に入れた: ' + name, delta: 1, text: true }); }
+    });
+    arr(r.quest_changes).slice(0, 4).forEach((c, i) => {
+      const q = g.quests.find((x) => x.id === str(c.id) || x.title === str(c.title));
+      if (q) { if (['open', 'taken', 'done', 'failed'].includes(c.status)) q.status = c.status; if (c.desc) q.desc = str(c.desc).slice(0, 100); }
+      else if (c.title) g.quests.unshift(normQuest({ ...c, id: '' }, i));
+    });
+    g.quests = g.quests.slice(0, 12);
+    arr(r.profile_changes).slice(0, 4).forEach((p) => {
+      const label = str(p.label).slice(0, 8);
+      if (!label) return;
+      const ex = g.profile.find((x) => x.label === label);
+      if (ex) ex.value = str(p.value).slice(0, 24); else if (g.profile.length < 10) g.profile.push({ label, value: str(p.value).slice(0, 24) });
+    });
+    arr(r.entity_changes).forEach((c) => {
       const e = g.entities.find((x) => x.id === str(c.id) || x.name === str(c.id) || x.name === str(c.name));
       if (!e) return;
       const rd = clamp(Math.round(num(c.relation_delta, 0)), -30, 30);
-      const pd = clamp(Math.round(num(c.power_delta, 0)), -20, 20);
       e.relation = clamp(e.relation + rd, -100, 100);
-      e.power = clamp(e.power + pd, 0, 100);
-      if (c.attitude) e.attitude = str(c.attitude).slice(0, 10);
+      e.power = clamp(e.power + clamp(Math.round(num(c.power_delta, 0)), -20, 20), 0, 100);
+      ['attitude', 'bond', 'mood'].forEach((k) => { if (c[k]) e[k] = str(c[k]).slice(0, 12); });
       if (c.note) e.note = str(c.note).slice(0, 60);
       if (rd) chips.push({ label: e.name + 'の好感', delta: rd });
     });
-    // 新しい人物・勢力
-    (Array.isArray(r.new_entities) ? r.new_entities : []).slice(0, 2).forEach((n) => {
-      const name = str(n.name).slice(0, 24);
-      if (!name || g.entities.some((e) => e.name === name) || g.entities.length >= 14) return;
-      g.entities.push({
-        id: 'n' + g.turn + '_' + g.entities.length, name, kind: str(n.kind, '人物').slice(0, 8),
-        relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100),
-        attitude: str(n.attitude).slice(0, 10), desc: str(n.desc).slice(0, 100), isNew: g.turn,
-      });
+    arr(r.new_entities).slice(0, 2).forEach((n) => {
+      const name = str(n.name).slice(0, 20);
+      if (!name || g.entities.some((e) => e.name === name) || g.entities.length >= 16) return;
+      g.entities.push({ id: 'n' + uid(), name, kind: str(n.kind, '人物').slice(0, 8), relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100), attitude: str(n.attitude).slice(0, 10), bond: str(n.bond).slice(0, 12), mood: str(n.mood).slice(0, 12), desc: str(n.desc).slice(0, 100), isNew: g.turn + 1 });
+      chips.push({ label: '出会い: ' + name, delta: 1, text: true });
     });
-    // 傾向
     const tc = r.trait_changes && typeof r.trait_changes === 'object' ? r.trait_changes : {};
     TRAITS.forEach(([k]) => { g.traits[k] = clamp(g.traits[k] + clamp(Math.round(num(tc[k], 0)), -10, 10), 0, 100); });
     if (r.perception) g.perception = str(r.perception).slice(0, 90);
-    if (r.new_date) g.date = str(r.new_date).slice(0, 30);
-    // 噂
-    const news = (Array.isArray(r.news) ? r.news : []).slice(0, 3).map((n) => ({ source: str(n.source).slice(0, 20), headline: str(n.headline).slice(0, 80), turn: g.turn + 1 }));
-    g.news = [...news, ...g.news].slice(0, 12);
-    const events = (Array.isArray(r.world_events) ? r.world_events : []).slice(0, 4).map((e) => ({ actor: str(e.actor).slice(0, 24), text: str(e.text).slice(0, 100) }));
+    const news = arr(r.news).slice(0, 3).map((n) => ({ source: str(n.source).slice(0, 20), headline: str(n.headline).slice(0, 80), turn: g.turn + 1 }));
+    g.news = [...news, ...g.news].slice(0, 20);
+    const events = arr(r.world_events).slice(0, 4).map((e) => ({ actor: str(e.actor).slice(0, 24), text: str(e.text).slice(0, 100) }));
     g.turn += 1;
-    g.chronicle.push(`${g.turn}手目（${g.date}）: ${str(r.summary, action).slice(0, 60)}`);
+    if (r.new_date) g.date = str(r.new_date).slice(0, 30);
+    g.chronicle.push(`${g.turn}｜${g.date}｜${str(r.summary, action).slice(0, 60)}`);
     const outcome = ['success', 'partial', 'failure'].includes(r.outcome) ? r.outcome : 'partial';
-    g.log.push({ t: 'res', turn: g.turn, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events, news });
-    g.suggestions = (Array.isArray(r.suggestions) ? r.suggestions : []).slice(0, 3).map((s) => str(s).slice(0, 80));
-    // 終幕（AI の判断、または 0 で終わる数値が尽きた）
+    g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events });
+    g.suggestions = arr(r.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80));
     let ending = r.ending && typeof r.ending === 'object' ? r.ending : null;
     const dead = g.stats.find((s) => s.fatal && s.value <= s.min);
     if (!ending && dead) ending = { type: 'defeat', title: dead.name + 'が尽きた', text: `${dead.name}が尽き、あなたの物語はここで幕を閉じた。` };
-    if (ending) {
-      g.status = 'ended';
-      g.log.push({ t: 'end', type: str(ending.type, 'other'), title: str(ending.title, '終幕').slice(0, 30), text: str(ending.text).slice(0, 400) });
-    }
+    if (ending) { g.status = 'ended'; g.log.push({ t: 'end', title: str(ending.title, '終幕').slice(0, 30), text: str(ending.text).slice(0, 400) }); }
   }
 
-  // 書きかけの JSON から narrative だけを取り出す（流れてくる途中を見せるため）
   function partialNarrative(raw) {
     const m = raw.match(/"narrative"\s*:\s*"((?:[^"\\]|\\.)*)/);
     if (!m) return '';
-    try { return JSON.parse('"' + m[1].replace(/\\$/, '') + '"'); } catch { return m[1].replace(/\\n/g, '\n'); }
+    try { return JSON.parse('"' + m[1].replace(/\\+$/, '') + '"'); } catch { return m[1].replace(/\\n/g, '\n'); }
   }
 
-  async function sendAction(action) {
+  // base の状態から action を 1 手進めた新しい状態を返す
+  async function runTurn(base, action) {
+    const g = clone(base);
+    g.log.push({ t: 'act', turn: g.turn + 1, text: action });
+    S.ctl = new AbortController();
+    const r = await S.sample.json(turnPrompt(base, action), {
+      signal: S.ctl.signal, cache: false, modelTier: tierOf(),
+      onText: ({ text }) => { const n = partialNarrative(text); const live = document.getElementById('live'); if (n && live) live.innerHTML = storyCard(n, base.date); },
+    });
+    if (!r || typeof r !== 'object' || !r.narrative) throw { code: 'invalid_json' };
+    applyResult(g, r, action);
+    return g;
+  }
+
+  async function sendAction(action, { regen = false } = {}) {
     action = str(action).trim();
-    if (!action || busy || !G || G.status !== 'playing') return;
-    if (!sample) { setStatus('この画面では AI を呼び出せません。claude.ai で開いてください。', true); return; }
-    busy = true;
-    undoSnap = JSON.parse(JSON.stringify(G));
-    G.log.push({ t: 'act', turn: G.turn + 1, text: action });
+    if (!action || S.busy || !S.G || (S.G.status !== 'playing' && !regen)) return;
+    if (!S.sample) { S.toast = 'この画面では AI を呼び出せません。claude.ai で開いてください。'; renderGame(); return; }
+    const base = regen && S.variants ? S.variants.base : clone(S.G);
+    S.busy = true; S.toast = ''; S.sheet = null; S.showSugg = false;
+    if (regen) S.G = clone(base);
+    S.G.log.push({ t: 'act', turn: S.G.turn + 1, text: action });
     renderGame();
-    const live = document.getElementById('live');
-    ctl = new AbortController();
     try {
-      const r = await sample.json(turnPrompt(action), {
-        signal: ctl.signal, cache: false,
-        onText: ({ text }) => {
-          const n = partialNarrative(text);
-          if (n && live) live.innerHTML = `<div class="res"><div class="narr">${esc(n)}</div></div>`;
-        },
-      });
-      if (!r || typeof r !== 'object' || !r.narrative) throw { code: 'invalid_json' };
-      applyResult(r, action);
-      undoSnap.lastAction = action;
-      saveGame();
-      busy = false;
-      renderGame();
+      const next = await runTurn(base, action);
+      if (!regen || !S.variants) S.variants = { base, action, list: [] };
+      S.variants.list.push(next);
+      S.variants.idx = S.variants.list.length - 1;
+      S.G = clone(next);
+      save();
     } catch (e) {
-      G = undoSnap;
-      undoSnap = null;
-      busy = false;
-      renderGame();
-      const ta = document.getElementById('cmd');
-      if (ta) ta.value = action;
-      if (!(e && e.code === 'cancelled')) setStatus(aiMsg(e), true);
+      S.G = S.variants && regen ? clone(S.variants.list[S.variants.idx]) : base;
+      if (!regen) S.draft = action;
+      if (!(e && e.code === 'cancelled')) S.toast = aiMsg(e);
     }
+    S.busy = false;
+    renderGame();
   }
 
-  function setStatus(msg, err) {
-    const el = document.getElementById('st');
-    if (el) { el.textContent = msg; el.className = 'hint' + (err ? ' status err' : ''); }
+  // ================= 個別の会話 =================
+  function chatPrompt(g, e, list, text) {
+    const hist = list.slice(-14).map((m) => `${m.role === 'me' ? 'プレイヤー' : e.name}: ${m.text}`).join('\n');
+    return `あなたは対話型シミュレーションゲームで、登場人物「${e.name}」を演じる。プレイヤーとの1対1のやり取り（直接の会話、または手紙・メッセージ）に、${e.name}本人として答える。
+
+${worldText(g, { short: true })}
+
+【${e.name}について】${e.kind}。${e.desc}
+プレイヤーへの好感 ${e.relation}（−100〜100）／関係「${e.bond || '-'}」／態度「${e.attitude || '-'}」／気分「${e.mood || '-'}」${e.note ? '／最近: ' + e.note : ''}
+【最近の年代記】
+${g.chronicle.slice(-6).join('\n') || 'なし'}
+【これまでのやり取り】
+${hist || '（はじめて）'}
+プレイヤー: ${text}
+
+決まり: ${e.name}の性格・立場・好感の度合いに合った口調と態度で、短めに（1〜4文）答える。好感が低ければ冷たく、警戒していれば探りを入れる。${g.mode === 'work' ? '原作の人物なら原作の性格に忠実に（原作の台詞をそのまま使わない）。' : ''}プレイヤーに都合のよすぎる約束はしない。
+次の JSON だけを返す:
+{"reply": "${e.name}の返事", "relation_delta": -5〜5 の整数, "mood": "今の気分（8字以内）", "memo": "年代記に残すほどの重要な内容なら一行、無ければ空文字"}`;
   }
 
-  // ---------- 画面: ゲーム ----------
-  function relPill(r) {
-    if (r >= 40) return '<span class="pill ally">友好</span>';
-    if (r >= 0) return '<span class="pill neutral">中立</span>';
-    if (r > -40) return '<span class="pill wary">警戒</span>';
-    return '<span class="pill hostile">敵対</span>';
+  async function sendChat(eid, text) {
+    text = str(text).trim();
+    const g = S.G;
+    const e = g && g.entities.find((x) => x.id === eid);
+    if (!e || !text || S.chatBusy) return;
+    if (!S.sample) { S.toast = 'この画面では AI を呼び出せません。'; return renderSheet(); }
+    g.chats[eid] = arr(g.chats[eid]);
+    const list = g.chats[eid];
+    const before = list.slice();
+    list.push({ role: 'me', text: text.slice(0, 400), date: g.date });
+    S.chatBusy = true; renderSheet();
+    try {
+      S.ctl = new AbortController();
+      const r = await S.sample.json(chatPrompt(g, e, before, text), { signal: S.ctl.signal, cache: false, modelTier: tierOf() });
+      list.push({ role: 'them', text: str(r && r.reply, '……').slice(0, 600), date: g.date });
+      e.relation = clamp(e.relation + clamp(Math.round(num(r && r.relation_delta, 0)), -5, 5), -100, 100);
+      if (r && r.mood) e.mood = str(r.mood).slice(0, 12);
+      if (r && r.memo) g.chronicle.push(`${g.turn}｜${g.date}｜${e.name}と話す: ${str(r.memo).slice(0, 50)}`);
+      g.chats[eid] = list.slice(-40);
+      save();
+    } catch (err) {
+      list.pop();
+      S.chatDraft = text;
+      if (!(err && err.code === 'cancelled')) S.toast = aiMsg(err);
+    }
+    S.chatBusy = false;
+    S.variants = null; // 会話で状態が変わったので作り直しの候補は消す
+    renderSheet();
+  }
+
+  async function refreshQuests() {
+    const g = S.G;
+    if (!S.sample || S.busy || S.questBusy) return;
+    S.questBusy = true; renderSheet();
+    try {
+      S.ctl = new AbortController();
+      const r = await S.sample.json(`あなたは対話型シミュレーションゲームのゲームマスター。次の世界で、プレイヤーが今引き受けられそうな新しい依頼・仕事・用件を3つ考える。今の状況・人物・勢力の思惑に結びついたものに。
+
+${worldText(g, { short: true })}
+【最近の年代記】
+${g.chronicle.slice(-6).join('\n') || 'なし'}
+
+JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "内容（50字以内）", "client": "依頼主", "reward": "報酬（金額か言葉）"}]}`, { signal: S.ctl.signal, cache: false, modelTier: 'quick' });
+      const fresh = arr(r && r.quests).slice(0, 3).map(normQuest);
+      g.quests = [...fresh, ...g.quests.filter((q) => q.status !== 'open')].slice(0, 12);
+      save();
+    } catch (err) {
+      if (!(err && err.code === 'cancelled')) S.toast = aiMsg(err);
+    }
+    S.questBusy = false; renderSheet();
+  }
+
+  // ================= ゲーム画面 =================
+  const TABS = [
+    ['time', 'clock', '時間'], ['stat', 'chart', '数値'], ['people', 'people', '人物'], ['chat', 'chat', '会話'],
+    ['wallet', 'wallet', '資金'], ['items', 'bag', '持ち物'], ['quest', 'board', '依頼'], ['log', 'book', '年代記'],
+  ];
+  const SHEET_TITLE = { time: ['clock', '時間'], stat: ['chart', 'ステータス'], people: ['people', '人物'], chat: ['chat', '会話'], wallet: ['wallet', '資金'], items: ['bag', '持ち物'], quest: ['board', '依頼の掲示板'], log: ['book', '年代記と噂'], settings: ['gear', '設定'] };
+
+  function storyCard(text, date) {
+    const body = esc(text).replace(/「([^」\n]{1,24})」/g, '<em>「$1」</em>');
+    return `<div class="story"><span class="datechip">${ic('clock')}${esc(date)}</span><div class="narr">${body}</div></div>`;
   }
 
   function feedHTML() {
-    return G.log.map((l) => {
-      if (l.t === 'intro') return `<div class="intro">${esc(l.text)}</div>`;
-      if (l.t === 'act') return `<div class="act"><small>${l.turn}手目・あなたの行動</small>${esc(l.text)}</div>`;
-      if (l.t === 'end') return `<div class="end"><p class="section-label" style="margin:0">終幕</p><h3>${esc(l.title)}</h3><div>${esc(l.text)}</div></div>`;
-      if (l.t === 'res') {
-        const label = { success: '成功', partial: '一部成功', failure: '失敗' }[l.outcome];
-        const chips = (l.chips || []).map((c) => `<span class="chip ${c.delta > 0 ? 'up' : 'down'}" title="${esc(c.reason || '')}">${esc(c.label)} ${c.delta > 0 ? '+' : '−'}${Math.abs(c.delta)}</span>`).join('');
-        const ev = (l.events || []).length ? `<div class="events"><h4>各地の動き</h4>${l.events.map((e) => `<div><b>${esc(e.actor)}</b>　${esc(e.text)}</div>`).join('')}</div>` : '';
-        return `<div class="res"><div class="head"><span class="badge ${l.outcome}">${label}</span>${esc(l.reason)}</div>
-          <div class="narr">${esc(l.narrative)}</div>${chips ? `<div class="chips">${chips}</div>` : ''}${ev}</div>`;
+    const g = S.G;
+    const lastResIdx = g.log.map((l) => l.t).lastIndexOf('res');
+    return g.log.map((l, i) => {
+      if (l.t === 'intro') return storyCard(l.text, l.date || '');
+      if (l.t === 'act') return `<div class="mine">${esc(l.text)}</div>`;
+      if (l.t === 'end') return `<div class="end"><span class="muted">終幕</span><h3>${esc(l.title)}</h3><div>${esc(l.text)}</div></div>`;
+      if (l.t !== 'res') return '';
+      const label = { success: '成功', partial: '一部成功', failure: '失敗' }[l.outcome];
+      const chips = arr(l.chips).map((c) => c.text ? `<span class="chip ${c.delta > 0 ? 'up' : 'down'}">${esc(c.label)}</span>` : `<span class="chip ${c.delta > 0 ? 'up' : 'down'}">${esc(c.label)} ${c.delta > 0 ? '+' : '−'}${c.money ? money(Math.abs(c.delta), g.wallet) : Math.abs(c.delta)}</span>`).join('');
+      const ev = arr(l.events).length ? `<div class="events"><h4>各地の動き</h4>${l.events.map((e) => `<div><b>${esc(e.actor)}</b>　${esc(e.text)}</div>`).join('')}</div>` : '';
+      const body = esc(l.narrative).replace(/「([^」\n]{1,24})」/g, '<em>「$1」</em>');
+      let tools = '';
+      if (i === lastResIdx && !S.busy) {
+        const v = S.variants;
+        const n = v ? v.list.length : 1;
+        const k = v ? v.idx + 1 : 1;
+        tools = `<div class="tools">
+          <button id="vprev" aria-label="前の結果" ${!v || k <= 1 ? 'disabled' : ''}>${ic('left')}</button><span class="pg">${k} / ${n}</span><button id="vnext" aria-label="次の結果" ${!v || k >= n ? 'disabled' : ''}>${ic('right')}</button>
+          <button id="regen" aria-label="結果を作り直す" title="同じ行動で結果を作り直す" ${v ? '' : 'disabled'}>${ic('redo')}</button>
+          <button id="edit" aria-label="行動を書き直す" title="この行動を書き直す" ${v ? '' : 'disabled'}>${ic('pen')}</button>
+          <span class="sp"></span><span class="muted">${l.turn}手目</span></div>`;
       }
-      return '';
+      return `<div class="story"><span class="datechip">${ic('clock')}${esc(l.date || g.date)}</span>
+        <div class="verdict"><span class="badge ${l.outcome}">${label}</span>${esc(l.reason)}</div>
+        <div class="narr">${body}</div>${chips ? `<div class="chips">${chips}</div>` : ''}${ev}</div>${tools}`;
     }).join('');
   }
 
   function renderGame() {
-    if (!G) return renderTitle();
-    const g = G;
-    const lastRes = [...g.log].reverse().find((l) => l.t === 'res');
-    const changed = new Map((lastRes && lastRes.turn === g.turn ? lastRes.chips : []).map((c) => [c.label, c.delta]));
-    const statsHTML = g.stats.map((s) => {
-      const pct = ((s.value - s.min) / (s.max - s.min)) * 100;
-      const d = changed.get(s.name);
-      const low = s.fatal && pct <= 25;
-      return `<div class="stat"><div class="top"><span>${esc(s.name)}</span><b>${d ? `<span class="${d > 0 ? 'flash-up' : 'flash-down'}">${d > 0 ? '+' : '−'}${Math.abs(d)}</span> ` : ''}${s.value}<small style="color:var(--muted);font-weight:400"> / ${s.max}</small></b></div>
-        <div class="meter${low ? ' low' : ''}"><i style="width:${pct.toFixed(1)}%"></i></div><div class="desc">${esc(s.desc)}</div></div>`;
-    }).join('');
-    const traitsHTML = TRAITS.map(([k, n]) => `<div class="trait"><span>${n}</span><div class="meter"><i style="width:${g.traits[k]}%"></i></div><b>${g.traits[k]}</b></div>`).join('');
-    const entsHTML = [...g.entities].sort((a, b) => b.power - a.power).map((e) => {
+    const g = S.G;
+    if (!g) return renderTitle();
+    const ended = g.status !== 'playing';
+    const sugg = S.showSugg && !ended && !S.busy ? `<div class="sugg pad">${arr(g.suggestions).map((s) => `<button data-sugg="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : '';
+    const openQ = g.quests.filter((q) => q.status === 'open').length;
+    app.innerHTML = `
+      <div class="top pad"><button class="back" id="home" aria-label="題へ戻る">${ic('back')}</button><h1>${esc(g.title)}</h1>
+        <button class="tier" id="tier" title="AI の考え方">${ic('spark')}${TIERS[tierOf()]}</button>
+        <button class="gear" id="gear" aria-label="設定">${ic('gear')}</button></div>
+      <div class="feed pad" id="feed">${feedHTML()}<div id="live">${S.busy ? '<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>世界が動いている…</div>' : ''}</div>${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ''}</div>
+      <div class="composer">
+        ${sugg}
+        <div class="inrow pad">
+          <button class="ic ${S.showSugg ? 'on' : ''}" id="bulb" aria-label="行動の候補" ${ended || S.busy ? 'disabled' : ''}>${ic('bulb')}</button>
+          <textarea id="cmd" rows="1" maxlength="600" placeholder="${ended ? 'この物語は終幕した' : '何をしますか？'}" ${ended || S.busy ? 'disabled' : ''}></textarea>
+          ${S.busy ? `<button class="send stop" id="stop" aria-label="やめる">${ic('stop')}</button>` : `<button class="send" id="send" aria-label="行う" ${ended ? 'disabled' : ''}>${ic('send')}</button>`}
+        </div>
+      </div>
+      <nav class="tabbar pad" role="tablist">${TABS.map(([k, icn, lb]) => `<button role="tab" data-tab="${k}" aria-selected="${S.sheet === k}">${ic(icn)}<span>${lb}</span>${k === 'quest' && openQ ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
+      <div id="sheetwrap"></div>`;
+    const $ = (id) => document.getElementById(id);
+    $('home').onclick = () => { if (S.busy && S.ctl) S.ctl.abort(); renderTitle(); };
+    $('gear').onclick = () => openSheet('settings');
+    $('tier').onclick = () => { const ks = Object.keys(TIERS); g.settings.tier = ks[(ks.indexOf(tierOf()) + 1) % ks.length]; save(); $('tier').innerHTML = ic('spark') + TIERS[tierOf()]; };
+    $('bulb').onclick = () => { S.showSugg = !S.showSugg; renderGame(); };
+    const ta = $('cmd');
+    if (S.draft) { ta.value = S.draft; S.draft = ''; }
+    const fit = () => { ta.style.height = '48px'; ta.style.height = Math.min(140, ta.scrollHeight + 2) + 'px'; };
+    ta.addEventListener('input', fit); fit();
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAction(ta.value); } });
+    if ($('send')) $('send').onclick = () => sendAction(ta.value);
+    if ($('stop')) $('stop').onclick = () => S.ctl && S.ctl.abort();
+    app.querySelectorAll('[data-sugg]').forEach((b) => b.onclick = () => { ta.value = b.dataset.sugg; S.showSugg = false; fit(); ta.focus(); app.querySelector('.sugg') && app.querySelector('.sugg').remove(); $('bulb').classList.remove('on'); });
+    app.querySelectorAll('[data-tab]').forEach((b) => b.onclick = () => openSheet(S.sheet === b.dataset.tab ? null : b.dataset.tab));
+    // 作り直し・切り替え・書き直し
+    const v = S.variants;
+    if ($('vprev')) $('vprev').onclick = () => { v.idx--; S.G = clone(v.list[v.idx]); save(); renderGame(); };
+    if ($('vnext')) $('vnext').onclick = () => { v.idx++; S.G = clone(v.list[v.idx]); save(); renderGame(); };
+    if ($('regen')) $('regen').onclick = () => sendAction(v.action, { regen: true });
+    if ($('edit')) $('edit').onclick = () => { S.G = clone(v.base); S.draft = v.action; S.variants = null; save(); renderGame(); };
+    const feed = $('feed');
+    requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
+    renderSheet();
+  }
+
+  function openSheet(k) {
+    S.sheet = k; S.full = false; S.toast = ''; S.chatWith = null; S.itemSel = null; S.histOpen = false;
+    app.querySelectorAll('.tabbar [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
+    renderSheet();
+  }
+
+  // ---------- パネルの中身 ----------
+  function statBarCls(s) {
+    const p = (s.value - s.min) / (s.max - s.min);
+    return s.fatal && p <= 0.25 ? 'red' : p <= 0.25 ? 'amber' : '';
+  }
+  function sheetTime(g) {
+    const hist = S.histOpen ? `<div class="box chron">${g.chronicle.length ? [...g.chronicle].reverse().map((c) => { const [t, d, x] = c.split('｜'); return `<div><span>${esc(t)}手目<br>${esc(d || '')}</span>${esc(x || c)}</div>`; }).join('') : '<p class="muted">まだ何も記されていない。</p>'}</div>` : '';
+    return `<div class="box big-date"><span class="circ">${ic('clock')}</span><span><span class="muted">タイムライン</span><b>${esc(g.date)}</b><span class="muted">${g.turn}手目</span></span></div>
+      <button class="pill-btn" id="hist">${ic('rewind')}${S.histOpen ? '履歴を閉じる' : '履歴を見る'}</button>${hist}
+      <button class="act-btn" id="skip" ${g.status !== 'playing' ? 'disabled' : ''}><span class="ico">${ic('bolt')}</span><span><b>次の大きな出来事まで進む</b><small>AI が幅を決め、大事な節目で止まります</small></span><span class="chev">${ic('right')}</span></button>
+      <div class="field-in"><span style="color:var(--muted);display:inline-flex">${ic('cal')}</span><input id="jump" placeholder="指定した時点へ進む…（例: 一週間後、秋の収穫祭）" maxlength="60"><button id="jumpgo" aria-label="進む">${ic('arrowR')}</button></div>
+      <label class="selrow">${ic('gauge')}<b>時間の流れ</b><select id="pace">${Object.entries(PACES).map(([k, v]) => `<option value="${k}" ${g.settings.pace === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>`;
+  }
+  function sheetStat(g) {
+    const nums = g.stats.map((s) => `<div class="sitem"><div class="top"><span>${esc(s.name)}</span><b class="${statBarCls(s) === 'red' ? 'low' : ''}">${s.value}</b></div><div class="bar ${statBarCls(s)}"><i style="width:${(((s.value - s.min) / (s.max - s.min)) * 100).toFixed(1)}%"></i></div><div class="desc">${esc(s.desc)}${s.fatal ? '（0で終幕）' : ''}</div></div>`).join('');
+    const prof = g.profile.map((p) => `<div class="sitem"><div class="top"><span>${esc(p.label)}</span><span class="txt">${esc(p.value)}</span></div></div>`).join('');
+    const traits = TRAITS.map(([k, n]) => `<div class="sitem"><div class="top"><span>${n}</span><b>${g.traits[k]}</b></div><div class="bar"><i style="width:${g.traits[k]}%"></i></div></div>`).join('');
+    return `<div class="box"><div class="sgrid">${nums}</div></div>
+      ${prof ? `<p class="sec">プロフィール</p><div class="box"><div class="sgrid">${prof}</div></div>` : ''}
+      <p class="sec">世界から見たあなた（50が普通）</p><div class="box"><div class="sgrid">${traits}</div><p class="muted" style="margin:8px 0 0">${esc(g.perception)}</p></div>
+      <p class="sec">立場と目的</p><div class="box"><div>${esc(g.role)}</div>${g.goal ? `<div class="muted" style="margin-top:6px">目指すもの：${esc(g.goal)}</div>` : ''}</div>`;
+  }
+  function relColor(r) { return r >= 40 ? 'var(--good)' : r >= 0 ? 'var(--accent)' : r > -40 ? 'var(--warn)' : 'var(--bad)'; }
+  function sheetPeople(g) {
+    return [...g.entities].sort((a, b) => b.power - a.power).map((e) => {
       const r = e.relation;
       const left = r >= 0 ? 50 : 50 + r / 2;
-      const width = Math.abs(r) / 2;
-      return `<div class="ent"><div class="nm"><span><b>${esc(e.name)}</b><span class="kind">${esc(e.kind)}</span>${e.isNew === g.turn - 1 ? ' <span class="pill wary">新</span>' : ''}</span>${relPill(r)}</div>
-        <div class="rel"><span>好感 ${r > 0 ? '+' : ''}${r}<div class="relbar"><i style="left:${left}%;width:${width}%"></i></div></span><span>力 ${e.power}<div class="meter"><i style="width:${e.power}%"></i></div></span></div>
-        <div class="att">${e.attitude ? '態度：' + esc(e.attitude) : ''}</div><div class="note">${esc(e.note || e.desc)}</div></div>`;
+      return `<div class="box pcard"><div class="row">${avatar(e.name, e.kind)}<div style="flex:1;min-width:0"><span class="nm">${esc(e.name)}</span><span class="kind">${esc(e.kind)}</span>${e.isNew === g.turn ? ' <span class="badge partial">新</span>' : ''}</div></div>
+        <div class="kv"><div class="top">好感度<b class="${r > 0 ? 'pos' : r < 0 ? 'neg' : ''}">${r > 0 ? '+' : ''}${r}</b></div><div class="cbar"><i style="left:${left}%;width:${Math.abs(r) / 2}%;background:${relColor(r)}"></i></div></div>
+        <div class="kv"><div class="top">影響力<b>${e.power}</b></div><div class="bar amber"><i style="width:${e.power}%"></i></div></div>
+        <div class="tline"><span>関係</span><b>${esc(e.bond || '—')}</b></div>
+        <div class="tline"><span>態度</span><b>${esc(e.attitude || '—')}</b></div>
+        <div class="tline"><span>気分</span><b>${esc(e.mood || '—')}</b></div>
+        <div class="muted">${esc(e.note ? '最近: ' + e.note : e.desc)}</div>
+        <button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button></div>`;
     }).join('');
-    const newsHTML = g.news.length ? g.news.map((n) => `<div><b>${esc(n.source)}</b>${esc(n.headline)}<span>${n.turn}手目</span></div>`).join('') : '<div style="color:var(--muted)">まだ噂は立っていない。</div>';
-    const ended = g.status !== 'playing';
-    const sugg = !ended && !busy ? (g.suggestions || []).map((s) => `<button data-sugg="${esc(s)}">${esc(s)}</button>`).join('') : '';
+  }
+  function sheetChat(g) {
+    if (S.chatWith) {
+      const e = g.entities.find((x) => x.id === S.chatWith);
+      if (!e) { S.chatWith = null; return sheetChat(g); }
+      const list = arr(g.chats[e.id]);
+      let lastDate = '';
+      const msgs = list.map((m) => { const d = m.date !== lastDate ? `<div class="msg-date">${esc(m.date)}</div>` : ''; lastDate = m.date; return d + `<div class="msg ${m.role === 'me' ? 'me' : 'them'}">${esc(m.text)}</div>`; }).join('');
+      return `<div class="chatview"><div class="row"><button class="btn" id="cback">← 一覧</button>${avatar(e.name, e.kind, 'sm')}<div><b>${esc(e.name)}</b><div class="muted">好感 ${e.relation > 0 ? '+' : ''}${e.relation}・${esc(e.mood || '—')}</div></div></div>
+        <div class="msgs" id="msgs">${msgs || `<p class="muted">${esc(e.name)}に話しかけてみよう。会話の内容は好感や物語に影響する。</p>`}${S.chatBusy ? '<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>返事を待っている…</div>' : ''}${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ''}</div>
+        <div class="cin"><input id="cmsg" maxlength="400" placeholder="${esc(e.name)}に話す" ${S.chatBusy ? 'disabled' : ''}><button class="send" id="csend" aria-label="送る" ${S.chatBusy ? 'disabled' : ''}>${ic('send')}</button></div></div>`;
+    }
+    const withMsg = g.entities.filter((e) => arr(g.chats[e.id]).length).sort((a, b) => arr(g.chats[b.id]).length - arr(g.chats[a.id]).length);
+    const rest = g.entities.filter((e) => !arr(g.chats[e.id]).length);
+    const row = (e) => { const list = arr(g.chats[e.id]); const last = list[list.length - 1]; return `<button class="citem" data-chat="${esc(e.id)}">${avatar(e.name, e.kind)}<span class="mid"><span class="t"><b>${esc(e.name)}</b><small>${last ? esc(last.date) : ''}</small></span><p>${last ? esc(last.text) : '…'}</p></span><span style="color:var(--muted)">${ic('right')}</span></button>`; };
+    return `<div class="clist">${[...withMsg, ...rest].map(row).join('')}</div>`;
+  }
+  function sheetWallet(g) {
+    const w = g.wallet;
+    const tx = w.history.map((h) => `<div class="box tx"><span class="ar ${h.amount >= 0 ? 'in' : 'out'}">${ic(h.amount >= 0 ? 'up' : 'down')}</span><span class="mid"><b>${esc(h.label)}</b><span class="muted">${esc(h.date)}</span></span><span class="amt ${h.amount >= 0 ? 'in' : 'out'}">${h.amount >= 0 ? '+' : '−'}${money(Math.abs(h.amount), w)}</span></div>`).join('');
+    return `<div class="balance"><span class="wm">${esc(w.symbol || [...(w.unit || '¤')][0])}</span><small>${ic('wallet')}残高</small><b>${money(w.balance, w)}</b></div>
+      <p class="sec">取引履歴</p>${tx || '<p class="muted">まだ取引はない。</p>'}`;
+  }
+  function sheetItems(g) {
+    const sel = S.itemSel != null ? g.items[S.itemSel] : null;
+    const detail = sel ? `<div class="box idetail"><div class="row"><span class="em">${esc(sel.icon)}</span><div><b>${esc(sel.name)}</b><div class="muted">${esc(sel.desc)}</div></div></div><button class="pill-btn" id="useitem">この持ち物を使う（行動に書き込む）</button></div>` : '';
+    const empties = Math.max(0, 8 - g.items.length);
+    return `${detail}<div class="igrid">${g.items.map((it, i) => `<button class="item" data-item="${i}"><span class="em">${esc(it.icon)}</span><b>${esc(it.name)}</b></button>`).join('')}${'<div class="item empty"></div>'.repeat(Math.min(empties, 4))}</div>
+      ${g.items.length ? '' : '<p class="muted">何も持っていない。</p>'}`;
+  }
+  function sheetQuest(g) {
+    const notes = g.quests.map((q) => `<div class="note"><h4>${esc(q.title)}</h4><p>${esc(q.desc)}</p><div class="by">by ${esc(q.client)}${q.reward ? ` ・ <b>${esc(q.reward)}</b>` : ''}</div>
+      ${q.status === 'open' ? `<button class="accept" data-accept="${esc(q.id)}" ${g.status !== 'playing' ? 'disabled' : ''}>引き受ける</button>` : `<span class="stamp ${q.status}">${{ taken: '引き受け中', done: '達成', failed: '失敗' }[q.status]}</span>`}</div>`).join('');
+    return `<div class="board"><h3>依 頼 の 掲 示 板</h3>${notes || '<div class="note"><p>いまは依頼が貼られていない。右上の更新で新しい依頼を探せる。</p></div>'}</div>${S.questBusy ? '<div class="thinking" style="color:#fff">新しい依頼を探している…</div>' : ''}${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ''}`;
+  }
+  function sheetLog(g) {
+    const news = g.news.length ? g.news.map((n) => `<div class="news-item"><b>${esc(n.source)}・${n.turn}手目</b>${esc(n.headline)}</div>`).join('') : '<p class="muted">まだ噂は立っていない。</p>';
+    const chron = g.chronicle.length ? [...g.chronicle].reverse().map((c) => { const [t, d, x] = c.split('｜'); return `<div><span>${esc(t)}手目</span>${esc(x || c)}</div>`; }).join('') : '<p class="muted">まだ何も記されていない。</p>';
+    return `<p class="sec">噂と知らせ</p><div class="box" style="display:grid;gap:10px">${news}</div><p class="sec">年代記</p><div class="box chron">${chron}</div>`;
+  }
+  function sheetSettings(g) {
+    return `<label class="selrow">${ic('spark')}<b>AI の考え方</b><select id="tiersel">${Object.entries(TIERS).map(([k, v]) => `<option value="${k}" ${tierOf() === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <p class="muted" style="margin:-4px 4px 0">速い: すぐ返るが判定は大まか／標準: ふつう／じっくり: 時間はかかるが筋の通った展開に。</p>
+      <div class="box"><b>${esc(g.title)}</b><div class="muted" style="margin-top:4px">${esc(g.premise)}</div></div>
+      <button class="act-btn" id="tohome"><span class="ico">${ic('back')}</span><span><b>題へ戻る</b><small>記録は自動で保存されています</small></span></button>
+      <button class="btn danger" id="delw" style="justify-self:start">この世界の記録を消す</button>`;
+  }
 
-    app.innerHTML = `
-      <div class="topbar">
-        <button class="btn ghost" id="menu">← 題へ</button>
-        <span class="wt">${esc(g.title)}</span>
-        <span class="date">${esc(g.date)}・${g.turn}手目</span>
-        <span class="sp"></span>
-        ${undoSnap && undoSnap.lastAction && !busy ? '<button class="btn ghost" id="undo">一手戻す</button>' : ''}
-      </div>
-      <div class="tabs" role="tablist">
-        <button role="tab" data-tab="story" aria-selected="${tab === 'story'}">物語</button>
-        <button role="tab" data-tab="self" aria-selected="${tab === 'self'}">あなた</button>
-        <button role="tab" data-tab="world" aria-selected="${tab === 'world'}">世界</button>
-      </div>
-      <div class="layout" data-tab="${tab}">
-        <section class="side left">
-          <div class="card"><h3>${g.mode === 'nation' ? '国の数値' : 'あなたの数値'}</h3>${statsHTML}</div>
-          <div class="card"><h3>世界から見たあなた<small>50が普通</small></h3>${traitsHTML}<p class="perceive">${esc(g.perception)}</p></div>
-          <div class="card"><h3>立場と目的</h3><div style="font-size:13px">${esc(g.role)}</div>${g.goal ? `<div style="font-size:13px;color:var(--muted);margin-top:6px">目指すもの：${esc(g.goal)}</div>` : ''}</div>
-        </section>
-        <section class="story">
-          <div class="feed" id="feed">${feedHTML()}<div id="live">${busy ? '<div class="thinking"><span class="dot"></span>世界が動いている…</div>' : ''}</div></div>
-          <div class="dock">
-            ${sugg ? `<div class="sugg">${sugg}</div>` : ''}
-            <div class="inputrow">
-              <textarea id="cmd" placeholder="${ended ? 'この物語は終幕した。題へ戻って新しい世界を始めよう。' : 'あなたの行動を書く（例: 帝国の使者を丁重にもてなしつつ、裏で密偵を放つ）'}" ${ended || busy ? 'disabled' : ''} maxlength="600"></textarea>
-              ${busy ? '<button class="btn" id="stop">やめる</button>' : `<button class="btn primary" id="send" ${ended ? 'disabled' : ''}>行う</button>`}
-            </div>
-            <div class="hint" id="st">${ended ? '' : 'Ctrl+Enter（スマホは「行う」）で送る。結果は今の数値と関係で判定され、無理な行動は失敗します。'}</div>
-          </div>
-        </section>
-        <section class="side right">
-          <div class="card"><h3>人物・勢力<small>好感 −100〜+100</small></h3>${entsHTML}</div>
-          <div class="card"><h3>噂と知らせ</h3><div class="news">${newsHTML}</div></div>
-          <div class="card"><h3>年代記</h3><div style="font-size:13px;display:grid;gap:4px">${g.chronicle.length ? g.chronicle.slice(-10).reverse().map((c) => `<div>${esc(c)}</div>`).join('') : '<div style="color:var(--muted)">まだ何も記されていない。</div>'}</div></div>
-        </section>
-      </div>`;
-
-    document.getElementById('menu').onclick = () => { if (busy && ctl) ctl.abort(); renderTitle(); };
-    const undo = document.getElementById('undo');
-    if (undo) undo.onclick = () => {
-      const act = undoSnap.lastAction;
-      delete undoSnap.lastAction;
-      G = undoSnap; undoSnap = null; saveGame(); renderGame();
-      const ta = document.getElementById('cmd'); if (ta) ta.value = act;
-    };
-    app.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
-      if (b.tagName !== 'BUTTON') return;
-      tab = b.dataset.tab;
-      app.querySelector('.layout').dataset.tab = tab;
-      app.querySelectorAll('.tabs button').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === tab)));
-    }));
-    const ta = document.getElementById('cmd');
-    const send = document.getElementById('send');
-    if (send) send.onclick = () => sendAction(ta.value);
-    if (ta) ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAction(ta.value); } });
-    const stop = document.getElementById('stop');
-    if (stop) stop.onclick = () => ctl && ctl.abort();
-    app.querySelectorAll('[data-sugg]').forEach((b) => b.addEventListener('click', () => { ta.value = b.dataset.sugg; ta.focus(); }));
-    // 最新の場面へ
-    const feed = document.getElementById('feed');
-    const lastEl = feed && feed.lastElementChild && (busy ? feed.lastElementChild : feed.children[feed.children.length - 2]);
-    if (lastEl) lastEl.scrollIntoView({ block: busy ? 'end' : 'start', behavior: 'smooth' });
+  function renderSheet() {
+    const wrap = document.getElementById('sheetwrap');
+    if (!wrap) return;
+    const g = S.G;
+    if (!S.sheet || !g) { wrap.innerHTML = ''; return; }
+    const tabbar = app.querySelector('.tabbar');
+    app.style.setProperty('--tabh', (tabbar ? tabbar.offsetHeight : 64) + 'px');
+    const k = S.sheet;
+    const [icn, ttl] = SHEET_TITLE[k];
+    const body = { time: sheetTime, stat: sheetStat, people: sheetPeople, chat: sheetChat, wallet: sheetWallet, items: sheetItems, quest: sheetQuest, log: sheetLog, settings: sheetSettings }[k](g);
+    const extra = k === 'quest' ? `<button id="qref" aria-label="依頼を更新" ${S.questBusy ? 'disabled' : ''}>${ic('refresh')}</button>` : '';
+    wrap.innerHTML = `<div class="scrim" id="scrim"></div><div class="sheet${S.full ? ' full' : ''}" data-k="${k}" role="dialog" aria-label="${ttl}"><div class="grab"></div>
+      <div class="sh"><span class="ttl">${ic(icn)}${ttl}</span>${extra}<button id="sfull" aria-label="${S.full ? '小さくする' : '大きくする'}">${ic(S.full ? 'shrink' : 'expand')}</button><button id="sclose" aria-label="閉じる">${ic('minus')}</button></div>
+      <div class="body" id="sbody">${body}</div></div>`;
+    const $ = (id) => document.getElementById(id);
+    $('scrim').onclick = () => openSheet(null);
+    $('sclose').onclick = () => openSheet(null);
+    $('sfull').onclick = () => { S.full = !S.full; renderSheet(); };
+    // 種類ごとの操作
+    if ($('hist')) $('hist').onclick = () => { S.histOpen = !S.histOpen; renderSheet(); };
+    if ($('skip')) $('skip').onclick = () => sendAction('（時間を進める）次の大きな出来事が起きるまで時間を進める。その間の日々は要約して語る。');
+    if ($('jumpgo')) $('jumpgo').onclick = () => { const v = $('jump').value.trim(); if (v) sendAction(`（時間を進める）「${v}」まで時間を進める。その間の出来事は要約して語る。`); };
+    if ($('pace')) $('pace').onchange = (e) => { g.settings.pace = e.target.value; save(); };
+    app.querySelectorAll('[data-talk]').forEach((b) => b.onclick = () => { S.sheet = 'chat'; S.chatWith = b.dataset.talk; app.querySelectorAll('.tabbar [data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'chat'))); renderSheet(); });
+    app.querySelectorAll('[data-chat]').forEach((b) => b.onclick = () => { S.chatWith = b.dataset.chat; S.toast = ''; renderSheet(); });
+    if ($('cback')) $('cback').onclick = () => { S.chatWith = null; S.toast = ''; renderSheet(); };
+    if ($('csend')) {
+      const inp = $('cmsg');
+      if (S.chatDraft) { inp.value = S.chatDraft; S.chatDraft = ''; }
+      const go = () => { S.toast = ''; sendChat(S.chatWith, inp.value); };
+      $('csend').onclick = go;
+      inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); go(); } });
+      const sb = $('sbody'); sb.scrollTop = sb.scrollHeight;
+      if (!S.chatBusy) inp.focus({ preventScroll: true });
+    }
+    app.querySelectorAll('[data-item]').forEach((b) => b.onclick = () => { S.itemSel = +b.dataset.item; renderSheet(); });
+    if ($('useitem')) $('useitem').onclick = () => { const it = g.items[S.itemSel]; openSheet(null); const ta = $('cmd'); if (ta && it) { ta.value = `「${it.name}」を使って、`; ta.focus(); } };
+    app.querySelectorAll('[data-accept]').forEach((b) => b.onclick = () => { const q = g.quests.find((x) => x.id === b.dataset.accept); if (q) sendAction(`依頼「${q.title}」（依頼主: ${q.client}）を引き受ける。`); });
+    if ($('qref')) $('qref').onclick = () => { S.toast = ''; refreshQuests(); };
+    if ($('tiersel')) $('tiersel').onchange = (e) => { g.settings.tier = e.target.value; save(); const t = $('tier'); if (t) t.innerHTML = ic('spark') + TIERS[tierOf()]; };
+    if ($('tohome')) $('tohome').onclick = () => renderTitle();
+    if ($('delw')) $('delw').onclick = (e) => { const b = e.currentTarget; if (b.dataset.armed) { writeSaves(loadSaves().filter((x) => x.id !== g.id)); renderTitle(); } else { b.dataset.armed = '1'; b.textContent = '本当に消す（元に戻せません）'; } };
   }
 
   renderTitle();
