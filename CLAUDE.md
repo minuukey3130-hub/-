@@ -3,7 +3,7 @@
 文章で行動すると AI が世界を動かすシミュレーションの試作。ユーザーは非プログラマーなので、報告は日本語で平易に。仕様は `docs/DESIGN.md`。
 
 ## 構成
-- `bansho.html` が本体（HTML / CSS / JS を 1 ファイルに）。claude.ai の Artifact として公開する（`capabilities: {sample: {}}`）。公開時は `<!doctype>` などの外枠を書かない（Artifact 側が付ける）。
+- `bansho.html` が本体（HTML / CSS / JS を 1 ファイルに）。claude.ai の Artifact として公開する（`capabilities: {sample: {}, db: {}, user: {}}`）。公開時は `<!doctype>` などの外枠を書かない（Artifact 側が付ける）。
 - `tools/mock-test.cjs`: AI の代わりに決まった返事を返す偽の `window.claude` を入れて、PC とスマホで画面を撮る確認用スクリプト（`node tools/mock-test.cjs <出力先>`）。
 
 ## 守ること
@@ -11,4 +11,5 @@
 2. AI の返事は信用しない。型を確かめ、足りなければ既定値で埋める。
 3. AI 呼び出しはプレイヤーの操作（送信ボタン）でだけ行う。ループやタイマーで呼ばない。失敗はコードごとに日本語で伝える。
 4. 表示文字列は日本語、識別子は英語。ライト / ダーク両方の色をトークンで定義する。
-5. 記録はブラウザの localStorage（試作のため）。読み書きは try/catch で囲む。
+5. 記録は claude.ai の保存場所（`db`）の、プレイヤー本人だけが読める `data/users/<id>/` に置く。世界の状態は `w_<世界id>`、物語の本文は `…/log/c0000` から 30 件ずつ、会話は `…/chats/<人物id>`。1 つの記録は 256KB まで。`db` が使えない画面では localStorage に保存する（読み書きは try/catch）。
+6. AI の記憶: 年代記が 16 件たまるごとに古い 10 件を「あらすじ」に畳み込む（プレイヤーの 1 手の直後に 1 回だけ）。人物ごとの記憶は 8 件、決定的な出来事は 40 件まで。

@@ -77,6 +77,12 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .tier { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; color: var(--fg); background: var(--surface); }
 .tier svg { width: 18px; height: 18px; color: var(--accent); }
 .gear { color: var(--accent); padding: 4px; }
+.savestate { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.savestate.bad { color: var(--bad); font-weight: 700; }
+.more { justify-self: center; font-size: 13px; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 14px; }
+.mem { display: grid; gap: 2px; font-size: 13px; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
+.mem b { font-size: 12px; color: var(--muted); }
+.synopsis { white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
 
 /* ---------- 物語 ---------- */
 .feed { flex: 1; overflow-y: auto; padding-block: 16px 20px; display: grid; gap: 14px; align-content: start; -webkit-overflow-scrolling: touch; }
@@ -269,6 +275,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .chron { display: grid; gap: 0; }
 .chron div { display: grid; grid-template-columns: 4.2em 1fr; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .chron span { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.chron .ms { grid-template-columns: 1.2em 1fr; }
+.chron .ms span { color: var(--warn); font-size: 14px; }
 .news-item { font-size: 14px; display: grid; gap: 0; }
 .news-item b { color: var(--accent); font-size: 12px; }
 
@@ -386,13 +394,140 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   }
 
   // ---------- 保存 ----------
+  // 端末内（localStorage）: claude.ai の保存場所が使えないときの控え
   function loadSaves() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '[]'); } catch { return []; } }
-  function writeSaves(list) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); } catch { /* 保存できない環境 */ } }
-  function save() {
-    if (!S.G) return;
-    S.G.updated = Date.now();
-    writeSaves([S.G, ...loadSaves().filter((s) => s.id !== S.G.id)].slice(0, 8));
+  function writeSaves(list) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(list)); return true; } catch { return false; } }
+  function markMigrated(id) { try { const k = SAVE_KEY + '.moved'; const a = JSON.parse(localStorage.getItem(k) || '[]'); a.push(id); localStorage.setItem(k, JSON.stringify(a)); } catch { /* 無視 */ } }
+  function migratedIds() { try { return JSON.parse(localStorage.getItem(SAVE_KEY + '.moved') || '[]'); } catch { return []; } }
+
+  // claude.ai の保存場所（あなた本人だけが読める区画）。
+  //   data/users/<id>/w_<世界id>            … 世界の状態（物語の本文と会話を除く）
+  //   …/w_<世界id>/log/c0000, c0001 …       … 物語の本文を 30 件ずつ
+  //   …/w_<世界id>/chats/<人物id>           … 人物との会話
+  const CHUNK = 30;
+  const Store = {
+    db: null, uid: null, cloud: false, ready: null, state: 'idle', queue: Promise.resolve(), saved: {},
+    init() {
+      this.ready = (async () => {
+        try {
+          if (!window.claude || !window.claude.use) return;
+          const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+          const id = db && user ? await user.id() : null;
+          if (db && id) { this.db = db; this.uid = id; this.cloud = true; }
+        } catch { /* 端末内に保存する */ }
+      })();
+      return this.ready;
+    },
+    col() { return this.db.collection('data/users/' + this.uid); },
+    ref(id) { return this.col().doc('w_' + id); },
+    // 世界の一覧（新しい順）
+    async list() {
+      await this.ready;
+      if (!this.cloud) return loadSaves().map(summaryOf);
+      const snap = await withTimeout(this.col().where('kind', '==', 'world').get(), 10000);
+      return snap.docs.map((d) => d.data()).filter(Boolean).map(summaryOf).sort((a, b) => b.updated - a.updated);
+    },
+    async load(id) {
+      await this.ready;
+      if (!this.cloud) { const g = loadSaves().find((x) => x.id === id); return g ? upgrade(clone(g)) : null; }
+      const ref = this.ref(id);
+      const doc = await withTimeout(ref.get(), 10000);
+      if (!doc.exists) return null;
+      const g = clone(doc.data());
+      const [logs, chats] = await Promise.all([withTimeout(ref.collection('log').get(), 10000), withTimeout(ref.collection('chats').get(), 10000)]);
+      g.log = logs.docs.flatMap((d) => arr(d.data().items)).slice(0, num(g.logLen, 0));
+      g.chats = {};
+      chats.docs.forEach((d) => { g.chats[d.id] = arr(d.data().list); });
+      delete g.kind; delete g.logLen;
+      this.saved[id] = { logLen: g.log.length, chats: {} };
+      return upgrade(g);
+    },
+    // 変わった所だけを書く。書き込みは 1 つずつ順番に。
+    save(g, { chat } = {}) {
+      g.updated = Date.now();
+      trimMemory(g);
+      if (!this.cloud) {
+        const ok = writeSaves([g, ...loadSaves().filter((x) => x.id !== g.id)].slice(0, 8));
+        this.setState(ok ? 'local' : 'error');
+        return;
+      }
+      const snap = clone(g);
+      this.setState('saving');
+      this.queue = this.queue.then(async () => {
+        const ref = this.ref(snap.id);
+        const { log, chats, ...rest } = snap;
+        const prev = this.saved[snap.id] || { logLen: 0 };
+        await ref.set({ ...rest, kind: 'world', logLen: log.length });
+        const from = Math.floor(Math.min(prev.logLen, log.length) / CHUNK);
+        const to = Math.floor(Math.max(0, log.length - 1) / CHUNK);
+        for (let c = from; c <= to; c++) await ref.collection('log').doc('c' + String(c).padStart(4, '0')).set({ items: log.slice(c * CHUNK, (c + 1) * CHUNK) });
+        if (chat && chats[chat]) await ref.collection('chats').doc(chat).set({ list: chats[chat] });
+        this.saved[snap.id] = { logLen: log.length };
+        this.setState('saved');
+      }).catch((e) => { this.setState(e && e.code === 'quota_exceeded' ? 'full' : 'error'); });
+      return this.queue;
+    },
+    async remove(id) {
+      await this.ready;
+      if (!this.cloud) { writeSaves(loadSaves().filter((x) => x.id !== id)); return; }
+      const ref = this.ref(id);
+      await this.queue;
+      for (const sub of ['log', 'chats']) { const snap = await ref.collection(sub).get(); for (const d of snap.docs) await ref.collection(sub).doc(d.id).delete(); }
+      await ref.delete();
+      delete this.saved[id];
+    },
+    // 端末内に残っていた記録を、保存場所へ移す（1 回だけ）
+    async migrate() {
+      await this.ready;
+      if (!this.cloud) return 0;
+      const moved = migratedIds();
+      const olds = [...loadSaves(), ...(() => { try { return JSON.parse(localStorage.getItem('banshoroku.saves.v1') || '[]'); } catch { return []; } })()].filter((g) => g && g.id && !moved.includes(g.id));
+      for (const g of olds) {
+        const u = upgrade(clone(g));
+        this.saved[u.id] = { logLen: 0 };
+        await this.save(u);
+        for (const eid of Object.keys(u.chats || {})) await this.save(u, { chat: eid });
+        if (this.state !== 'error' && this.state !== 'full') markMigrated(g.id);
+      }
+      return olds.length;
+    },
+    setState(st) {
+      this.state = st;
+      const el = document.getElementById('savestate');
+      if (el) el.outerHTML = saveBadge();
+    },
+  };
+  function withTimeout(p, ms) { return Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), ms))]); }
+  function summaryOf(g) { return { id: g.id, title: g.title, date: g.date, turn: g.turn, status: g.status, updated: g.updated || 0 }; }
+  function saveBadge() {
+    const m = { idle: '', saving: '保存中…', saved: '保存済み', local: 'この端末に保存', error: '保存できませんでした', full: '保存場所がいっぱいです' };
+    const bad = Store.state === 'error' || Store.state === 'full';
+    return `<span id="savestate" class="savestate${bad ? ' bad' : ''}" title="${Store.cloud ? 'claude.ai のあなた専用の保存場所' : 'このブラウザの中'}">${esc(m[Store.state] || '')}</span>`;
   }
+  // 古い形式の記録を今の形に
+  function upgrade(g) {
+    g.settings = g.settings || { tier: 'default', pace: 'auto' };
+    g.chats = g.chats || {};
+    g.profile = arr(g.profile); g.items = arr(g.items); g.quests = arr(g.quests); g.news = arr(g.news); g.log = arr(g.log); g.chronicle = arr(g.chronicle);
+    g.wallet = g.wallet || { unit: '円', symbol: '', balance: 0, history: [] };
+    g.milestones = arr(g.milestones);
+    g.synopsis = str(g.synopsis);
+    g.synopsisUpTo = num(g.synopsisUpTo, 0);
+    g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory) }));
+    return g;
+  }
+  // 記録が大きくなりすぎないように（あらすじに畳み込んだ古い年代記から捨てる）
+  function trimMemory(g) {
+    const over = g.chronicle.length - 300;
+    if (over > 0 && g.synopsisUpTo > 0) {
+      const n = Math.min(over, g.synopsisUpTo);
+      g.chronicle.splice(0, n);
+      g.synopsisUpTo -= n;
+    }
+    g.milestones = g.milestones.slice(-40);
+  }
+  function save(opts) { if (S.G) Store.save(S.G, opts); }
+  Store.init();
 
   // ---------- AI ----------
   (async () => {
@@ -470,7 +605,6 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   };
   function renderTitle() {
     S.G = null; S.sheet = null; S.variants = null;
-    const saves = loadSaves();
     const modeBtn = (m, t, d) => `<button class="mode" data-mode="${m}"><span class="ico" style="background:${MODE_STYLE[m][1]};color:${MODE_STYLE[m][2]}">${ic(MODE_STYLE[m][0])}</span><span><b>${t}</b><small>${d}</small></span></button>`;
     app.innerHTML = `<div class="scroll"><div class="title pad">
       <h1>万象録</h1><p class="tag">あなたの一手に、世界が答える。</p>
@@ -480,21 +614,47 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         ${modeBtn('work', '作品世界に入る', '好きな漫画や物語に、新しい登場人物として入り込む。原作の人物があなたに反応する。')}
         ${modeBtn('custom', '自由な世界', '時代・舞台・立場を書くと、数値や人物ごと世界を組み立てる。')}
       </div></div>
-      ${saves.length ? `<div><p class="lbl">続きから</p><div class="saves">${saves.map((s) => `<div class="save">${avatar(s.title, '国')}<div class="mid"><b>${esc(s.title)}</b><small>${esc(s.date)}・${s.turn}手目${s.status === 'ended' ? '・終幕' : ''}</small></div>
-        <button class="btn primary" data-load="${esc(s.id)}">開く</button><button class="btn danger" data-del="${esc(s.id)}">消す</button></div>`).join('')}</div></div>` : ''}
-      <p class="hint">1手ごと・1回の会話ごとに、あなたの Claude の利用枠を使います。記録はこのブラウザにだけ保存されます。</p>
+      <div id="savelist"><p class="lbl">続きから</p><p class="muted">記録を読み込んでいます…</p></div>
+      <p class="hint" id="savehint">1手ごと・1回の会話ごとに、あなたの Claude の利用枠を使います。</p>
     </div></div>`;
     app.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => {
-      if (b.dataset.mode === 'nation') { S.G = presetNation(); S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date }); save(); renderGame(); }
+      if (b.dataset.mode === 'nation') { S.G = upgrade(presetNation()); S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date }); S.feedLimit = 60; save(); renderGame(); }
       else renderSetup(b.dataset.mode);
     });
-    app.querySelectorAll('[data-load]').forEach((b) => b.onclick = () => {
-      const s = loadSaves().find((x) => x.id === b.dataset.load);
-      if (s) { S.G = s; S.variants = null; renderGame(); }
+    fillSaves();
+  }
+
+  async function fillSaves() {
+    const box = document.getElementById('savelist');
+    let list = [];
+    let note = '';
+    try {
+      await Store.ready;
+      const moved = await Store.migrate().catch(() => 0);
+      if (moved) note = `この端末に残っていた ${moved} 件の記録を、claude.ai の保存場所へ移しました。`;
+      list = await Store.list();
+    } catch {
+      note = '保存場所に届きませんでした。この端末の記録を表示しています。';
+      list = loadSaves().map(summaryOf);
+    }
+    if (!document.body.contains(box)) return;
+    const hint = document.getElementById('savehint');
+    if (hint) hint.textContent = `1手ごと・1回の会話ごとに、あなたの Claude の利用枠を使います。${Store.cloud ? '記録は claude.ai のあなた専用の場所に保存され、PC とスマホで同じ続きを遊べます。' : '記録はこのブラウザの中にだけ保存されます。'}`;
+    box.innerHTML = list.length || note ? `<p class="lbl">続きから</p>${note ? `<p class="muted">${esc(note)}</p>` : ''}<div class="saves">${list.map((s) => `<div class="save">${avatar(s.title, '国')}<div class="mid"><b>${esc(s.title)}</b><small>${esc(s.date)}・${s.turn}手目${s.status === 'ended' ? '・終幕' : ''}</small></div>
+        <button class="btn primary" data-load="${esc(s.id)}">開く</button><button class="btn danger" data-del="${esc(s.id)}">消す</button></div>`).join('')}</div>` : '';
+    box.querySelectorAll('[data-load]').forEach((b) => b.onclick = async () => {
+      b.disabled = true; b.textContent = '読み込み中…';
+      try {
+        const g = await Store.load(b.dataset.load);
+        if (g) { S.G = g; S.variants = null; S.feedLimit = 60; renderGame(); return; }
+        b.textContent = '見つかりません';
+      } catch { b.textContent = '読み込めません'; b.disabled = false; }
     });
-    app.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => {
-      if (b.dataset.armed) { writeSaves(loadSaves().filter((x) => x.id !== b.dataset.del)); renderTitle(); }
-      else { b.dataset.armed = '1'; b.textContent = '本当に消す'; }
+    box.querySelectorAll('[data-del]').forEach((b) => b.onclick = async () => {
+      if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = '本当に消す'; return; }
+      b.disabled = true; b.textContent = '消しています…';
+      try { await Store.remove(b.dataset.del); } catch { /* 次の一覧で分かる */ }
+      fillSaves();
     });
   }
 
@@ -525,7 +685,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
       S.ctl = new AbortController();
       try {
         const w = await S.sample.json(genPrompt(work ? 'work' : 'custom', inp), { signal: S.ctl.signal });
-        S.G = normalizeWorld(w, work ? 'work' : 'custom', inp);
+        S.G = upgrade(normalizeWorld(w, work ? 'work' : 'custom', inp));
+        S.feedLimit = 60;
         S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
         save(); renderGame();
       } catch (e) {
@@ -612,7 +773,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   function worldText(g, { short = false } = {}) {
     const stats = g.stats.map((s) => `- ${s.name}（key:${s.key}）${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''}${short ? '' : ' … ' + s.desc}`).join('\n');
     const prof = g.profile.map((p) => `${p.label}: ${p.value}`).join('／');
-    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${e.note ? '｜最近: ' + e.note : ''}`).join('\n');
+    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
     const traits = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
     const items = g.items.map((i) => i.name).join('、') || 'なし';
     const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
@@ -630,12 +791,16 @@ ${quests}
 ${stats}
 【人物・勢力】
 ${ents}
-【世界から見たプレイヤー】（0〜100、50が普通）${traits}／評判: ${g.perception}`;
+【世界から見たプレイヤー】（0〜100、50が普通）${traits}／評判: ${g.perception}
+【これまでのあらすじ】
+${g.synopsis || '（まだ始まったばかり）'}
+【決定的な出来事】
+${g.milestones.length ? g.milestones.map((m) => '- ' + m).join('\n') : 'まだない'}`;
   }
 
   // ================= 1 手 =================
   function turnPrompt(g, action) {
-    const chron = g.chronicle.slice(-16).join('\n') || '（まだない）';
+    const chron = g.chronicle.slice(g.synopsisUpTo).slice(-16).join('\n') || '（まだない）';
     const recent = g.log.filter((l) => l.t === 'res').slice(-2).map((l) => `［${l.turn}手目］${l.action}\n→ ${str(l.narrative).slice(0, 500)}`).join('\n\n') || str(g.intro).slice(0, 500);
     const chats = Object.entries(g.chats || {}).map(([id, list]) => {
       const e = g.entities.find((x) => x.id === id);
@@ -648,7 +813,7 @@ ${ents}
 
 ${worldText(g)}
 
-【これまでの年代記】
+【あらすじ以降の年代記】
 ${chron}
 【直前の展開】
 ${recent}
@@ -664,6 +829,7 @@ ${action}
 - 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に。
 - 世界はプレイヤーの「傾向」を覚えて対応を変える（好戦的なら他が手を組んで警戒、約束破りなら信用されない、慈悲深ければ慕われる、謀略が多ければ密偵を警戒される）。今回強まった傾向を trait_changes に。
 - 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果はあなたが判定する。${workRule}
+- 【これまでのあらすじ】【決定的な出来事】と各人物の「覚えていること」は、過去の事実。矛盾させない。昔の約束・恩・恨みは、ふさわしい場面で人物の行動に反映させる。
 - 物語が決定的に終わったとき（目的を果たした、致命的な敗北、0で終幕の数値が0）だけ ending を入れる。
 
 次の形の JSON だけを返す（narrative を最初に）:
@@ -676,7 +842,7 @@ ${action}
   "item_changes": [{"op": "add" か "remove", "name": "持ち物", "icon": "絵文字1つ", "desc": "説明"}],
   "quest_changes": [{"id": "既存の id（新規なら省略）", "title": "名前", "desc": "内容", "client": "依頼主", "reward": "報酬", "status": "open/taken/done/failed"}],
   "profile_changes": [{"label": "項目", "value": "新しい値"}],
-  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "note": "この手での出来事（30字以内）"}],
+  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "note": "この手での出来事（30字以内）", "memory": "この人物がこの先もずっと覚えておくこと（約束・恩・恨み・秘密の共有など。無ければ空文字。30字以内）"}],
   "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "desc": "どんな存在か"}],
   "world_events": [{"actor": "動いた人物・勢力", "text": "何をしたか（50字以内）"}],
   "news": [{"source": "噂の出どころ", "headline": "世間の受け止め（40字以内）"}],
@@ -684,6 +850,7 @@ ${action}
   "perception": "世界がいまプレイヤーをどう見ているか（50字以内）",
   "new_date": "この手の後の物語内の時（例: 2006年9月・16日目）",
   "summary": "年代記に残す一行（40字以内）",
+  "milestone": "物語の流れを変える決定的な出来事なら一行（40字以内）、そうでなければ空文字",
   "suggestions": ["次の行動の例を3つ。具体的で、性格の違うもの"],
   "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末（150字以内）"}
 }
@@ -735,12 +902,13 @@ ${action}
       e.power = clamp(e.power + clamp(Math.round(num(c.power_delta, 0)), -20, 20), 0, 100);
       ['attitude', 'bond', 'mood'].forEach((k) => { if (c[k]) e[k] = str(c[k]).slice(0, 12); });
       if (c.note) e.note = str(c.note).slice(0, 60);
+      if (str(c.memory).trim()) { e.memory = [...arr(e.memory), `${g.turn + 1}手目: ${str(c.memory).trim().slice(0, 40)}`].slice(-8); }
       if (rd) chips.push({ label: e.name + 'の好感', delta: rd });
     });
     arr(r.new_entities).slice(0, 2).forEach((n) => {
       const name = str(n.name).slice(0, 20);
       if (!name || g.entities.some((e) => e.name === name) || g.entities.length >= 16) return;
-      g.entities.push({ id: 'n' + uid(), name, kind: str(n.kind, '人物').slice(0, 8), relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100), attitude: str(n.attitude).slice(0, 10), bond: str(n.bond).slice(0, 12), mood: str(n.mood).slice(0, 12), desc: str(n.desc).slice(0, 100), isNew: g.turn + 1 });
+      g.entities.push({ id: 'n' + uid(), name, kind: str(n.kind, '人物').slice(0, 8), relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100), attitude: str(n.attitude).slice(0, 10), bond: str(n.bond).slice(0, 12), mood: str(n.mood).slice(0, 12), desc: str(n.desc).slice(0, 100), memory: [], isNew: g.turn + 1 });
       chips.push({ label: '出会い: ' + name, delta: 1, text: true });
     });
     const tc = r.trait_changes && typeof r.trait_changes === 'object' ? r.trait_changes : {};
@@ -752,6 +920,7 @@ ${action}
     g.turn += 1;
     if (r.new_date) g.date = str(r.new_date).slice(0, 30);
     g.chronicle.push(`${g.turn}｜${g.date}｜${str(r.summary, action).slice(0, 60)}`);
+    if (str(r.milestone).trim()) g.milestones.push(`${g.turn}手目（${g.date}）: ${str(r.milestone).trim().slice(0, 50)}`);
     const outcome = ['success', 'partial', 'failure'].includes(r.outcome) ? r.outcome : 'partial';
     g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events });
     g.suggestions = arr(r.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80));
@@ -804,6 +973,44 @@ ${action}
     }
     S.busy = false;
     renderGame();
+    maybeCompress();
+  }
+
+  // 年代記がたまったら、古い分を「これまでのあらすじ」に畳み込む（プレイヤーの 1 手に続けて 1 回だけ）
+  const FOLD_AT = 16;
+  const FOLD_N = 10;
+  async function maybeCompress() {
+    const g = S.G;
+    if (!g || !S.sample || S.folding || g.chronicle.length - g.synopsisUpTo < FOLD_AT) return;
+    S.folding = true;
+    const id = g.id;
+    const upTo = g.synopsisUpTo;
+    const part = g.chronicle.slice(upTo, upTo + FOLD_N);
+    const ms = g.milestones.map((m) => '- ' + m).join('\n') || 'なし';
+    try {
+      const r = await S.sample.json(`あなたは長編シミュレーションゲームの記録係。「これまでのあらすじ」に、続きの出来事を書き足して、新しいあらすじを作る。
+
+【世界】${g.title}／${g.premise}
+【プレイヤー】${g.role}
+【これまでのあらすじ】
+${g.synopsis || '（まだない）'}
+【続きの出来事（手目｜日付｜内容）】
+${part.join('\n')}
+【決定的な出来事】
+${ms}
+
+決まり: 日本語で 700 字以内。時系列で、誰が何をして、どんな約束・恩・恨み・因縁・勢力図の変化が残ったかを具体的に（人名・地名・数を残す）。細かい描写は省く。古い出来事ほど短く。
+JSON だけを返す: {"synopsis": "新しいあらすじ"}`, { cache: false, modelTier: 'quick' });
+      const text = str(r && r.synopsis).trim();
+      if (text) {
+        // 待っている間に別の世界へ移っていたら何もしない
+        const apply = (x) => { if (x && x.id === id && x.synopsisUpTo === upTo) { x.synopsis = text.slice(0, 1200); x.synopsisUpTo = upTo + part.length; } };
+        apply(S.G);
+        if (S.variants) { S.variants.list.forEach(apply); apply(S.variants.base); }
+        if (S.G && S.G.id === id) save();
+      }
+    } catch { /* 次の手でまた試す */ }
+    S.folding = false;
   }
 
   // ================= 個別の会話 =================
@@ -815,6 +1022,7 @@ ${worldText(g, { short: true })}
 
 【${e.name}について】${e.kind}。${e.desc}
 プレイヤーへの好感 ${e.relation}（−100〜100）／関係「${e.bond || '-'}」／態度「${e.attitude || '-'}」／気分「${e.mood || '-'}」${e.note ? '／最近: ' + e.note : ''}
+【${e.name}が覚えていること】${arr(e.memory).length ? arr(e.memory).join('／') : 'とくになし'}
 【最近の年代記】
 ${g.chronicle.slice(-6).join('\n') || 'なし'}
 【これまでのやり取り】
@@ -823,7 +1031,7 @@ ${hist || '（はじめて）'}
 
 決まり: ${e.name}の性格・立場・好感の度合いに合った口調と態度で、短めに（1〜4文）答える。好感が低ければ冷たく、警戒していれば探りを入れる。${g.mode === 'work' ? '原作の人物なら原作の性格に忠実に（原作の台詞をそのまま使わない）。' : ''}プレイヤーに都合のよすぎる約束はしない。
 次の JSON だけを返す:
-{"reply": "${e.name}の返事", "relation_delta": -5〜5 の整数, "mood": "今の気分（8字以内）", "memo": "年代記に残すほどの重要な内容なら一行、無ければ空文字"}`;
+{"reply": "${e.name}の返事", "relation_delta": -5〜5 の整数, "mood": "今の気分（8字以内）", "memo": "約束・告白・取引・決裂など、${e.name}がこの先も覚えておくべき内容なら一行（30字以内）、無ければ空文字"}`;
   }
 
   async function sendChat(eid, text) {
@@ -843,9 +1051,13 @@ ${hist || '（はじめて）'}
       list.push({ role: 'them', text: str(r && r.reply, '……').slice(0, 600), date: g.date });
       e.relation = clamp(e.relation + clamp(Math.round(num(r && r.relation_delta, 0)), -5, 5), -100, 100);
       if (r && r.mood) e.mood = str(r.mood).slice(0, 12);
-      if (r && r.memo) g.chronicle.push(`${g.turn}｜${g.date}｜${e.name}と話す: ${str(r.memo).slice(0, 50)}`);
-      g.chats[eid] = list.slice(-40);
-      save();
+      if (r && str(r.memo).trim()) {
+        const memo = str(r.memo).trim().slice(0, 40);
+        g.chronicle.push(`${g.turn}｜${g.date}｜${e.name}と話す: ${memo}`);
+        e.memory = [...arr(e.memory), `${g.turn}手目の会話: ${memo}`].slice(-8);
+      }
+      g.chats[eid] = list.slice(-60);
+      save({ chat: eid });
     } catch (err) {
       list.pop();
       S.chatDraft = text;
@@ -893,7 +1105,11 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   function feedHTML() {
     const g = S.G;
     const lastResIdx = g.log.map((l) => l.t).lastIndexOf('res');
-    return g.log.map((l, i) => {
+    const limit = S.feedLimit || 60;
+    const start = Math.max(0, g.log.length - limit);
+    const more = start > 0 ? `<button class="more" id="more">さらに前を読む（あと ${start} 件）</button>` : '';
+    return more + g.log.map((l, i) => {
+      if (i < start) return '';
       if (l.t === 'intro') return storyCard(l.text, l.date || '');
       if (l.t === 'act') return `<div class="mine">${esc(l.text)}</div>`;
       if (l.t === 'end') return `<div class="end"><span class="muted">終幕</span><h3>${esc(l.title)}</h3><div>${esc(l.text)}</div></div>`;
@@ -927,6 +1143,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     const openQ = g.quests.filter((q) => q.status === 'open').length;
     app.innerHTML = `
       <div class="top pad"><button class="back" id="home" aria-label="題へ戻る">${ic('back')}</button><h1>${esc(g.title)}</h1>
+        ${saveBadge()}
         <button class="tier" id="tier" title="AI の考え方">${ic('spark')}${TIERS[tierOf()]}</button>
         <button class="gear" id="gear" aria-label="設定">${ic('gear')}</button></div>
       <div class="feed pad" id="feed">${feedHTML()}<div id="live">${S.busy ? '<div class="thinking"><span class="dots"><i></i><i></i><i></i></span>世界が動いている…</div>' : ''}</div>${S.toast ? `<div class="toast">${esc(S.toast)}</div>` : ''}</div>
@@ -961,7 +1178,16 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('regen')) $('regen').onclick = () => sendAction(v.action, { regen: true });
     if ($('edit')) $('edit').onclick = () => { S.G = clone(v.base); S.draft = v.action; S.variants = null; save(); renderGame(); };
     const feed = $('feed');
-    requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
+    if ($('more')) $('more').onclick = () => {
+      const h = feed.scrollHeight;
+      S.feedLimit = (S.feedLimit || 60) + 60;
+      S.keepScroll = true;
+      renderGame();
+      const f2 = document.getElementById('feed');
+      f2.scrollTop = f2.scrollHeight - h;
+    };
+    if (S.keepScroll) S.keepScroll = false;
+    else requestAnimationFrame(() => { feed.scrollTop = feed.scrollHeight; });
     renderSheet();
   }
 
@@ -1005,6 +1231,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         <div class="tline"><span>態度</span><b>${esc(e.attitude || '—')}</b></div>
         <div class="tline"><span>気分</span><b>${esc(e.mood || '—')}</b></div>
         <div class="muted">${esc(e.note ? '最近: ' + e.note : e.desc)}</div>
+        ${arr(e.memory).length ? `<div class="mem"><b>${esc(e.name)}が覚えていること</b>${arr(e.memory).slice().reverse().map((m) => `<div>${esc(m)}</div>`).join('')}</div>` : ''}
         <button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button></div>`;
     }).join('');
   }
@@ -1045,12 +1272,15 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   function sheetLog(g) {
     const news = g.news.length ? g.news.map((n) => `<div class="news-item"><b>${esc(n.source)}・${n.turn}手目</b>${esc(n.headline)}</div>`).join('') : '<p class="muted">まだ噂は立っていない。</p>';
     const chron = g.chronicle.length ? [...g.chronicle].reverse().map((c) => { const [t, d, x] = c.split('｜'); return `<div><span>${esc(t)}手目</span>${esc(x || c)}</div>`; }).join('') : '<p class="muted">まだ何も記されていない。</p>';
-    return `<p class="sec">噂と知らせ</p><div class="box" style="display:grid;gap:10px">${news}</div><p class="sec">年代記</p><div class="box chron">${chron}</div>`;
+    const syn = `<p class="sec">これまでのあらすじ</p><div class="box synopsis">${g.synopsis ? esc(g.synopsis) : '<span class="muted">年代記がたまると、古い出来事がここにあらすじとしてまとめられ、AI が長く覚えていられるようになります。</span>'}</div>`;
+    const ms = `<p class="sec">決定的な出来事</p><div class="box chron">${g.milestones.length ? g.milestones.slice().reverse().map((m) => `<div class="ms"><span>★</span>${esc(m)}</div>`).join('') : '<p class="muted">まだない。</p>'}</div>`;
+    return syn + ms + `<p class="sec">噂と知らせ</p><div class="box" style="display:grid;gap:10px">${news}</div><p class="sec">年代記</p><div class="box chron">${chron}</div>`;
   }
   function sheetSettings(g) {
     return `<label class="selrow">${ic('spark')}<b>AI の考え方</b><select id="tiersel">${Object.entries(TIERS).map(([k, v]) => `<option value="${k}" ${tierOf() === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <p class="muted" style="margin:-4px 4px 0">速い: すぐ返るが判定は大まか／標準: ふつう／じっくり: 時間はかかるが筋の通った展開に。</p>
       <div class="box"><b>${esc(g.title)}</b><div class="muted" style="margin-top:4px">${esc(g.premise)}</div></div>
+      <div class="box"><b>記録の保存先</b><div class="muted" style="margin-top:4px">${Store.cloud ? 'claude.ai のあなた専用の保存場所（あなた以外は読めません）。PC とスマホで同じ続きを遊べます。' : 'このブラウザの中だけ。ブラウザのデータを消すと失われます。'}<br>物語 ${g.log.length} 件・年代記 ${g.chronicle.length} 行・あらすじに畳んだ出来事 ${g.synopsisUpTo} 件</div></div>
       <button class="act-btn" id="tohome"><span class="ico">${ic('back')}</span><span><b>題へ戻る</b><small>記録は自動で保存されています</small></span></button>
       <button class="btn danger" id="delw" style="justify-self:start">この世界の記録を消す</button>`;
   }
@@ -1096,7 +1326,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('qref')) $('qref').onclick = () => { S.toast = ''; refreshQuests(); };
     if ($('tiersel')) $('tiersel').onchange = (e) => { g.settings.tier = e.target.value; save(); const t = $('tier'); if (t) t.innerHTML = ic('spark') + TIERS[tierOf()]; };
     if ($('tohome')) $('tohome').onclick = () => renderTitle();
-    if ($('delw')) $('delw').onclick = (e) => { const b = e.currentTarget; if (b.dataset.armed) { writeSaves(loadSaves().filter((x) => x.id !== g.id)); renderTitle(); } else { b.dataset.armed = '1'; b.textContent = '本当に消す（元に戻せません）'; } };
+    if ($('delw')) $('delw').onclick = async (e) => { const b = e.currentTarget; if (b.dataset.armed) { b.disabled = true; b.textContent = '消しています…'; try { await Store.remove(g.id); } catch { /* 無視 */ } renderTitle(); } else { b.dataset.armed = '1'; b.textContent = '本当に消す（元に戻せません）'; } };
   }
 
   renderTitle();
