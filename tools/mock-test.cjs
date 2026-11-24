@@ -58,6 +58,7 @@ window.claude = { use: async (n) => {
       news: [{ source: '酒場の噂', headline: '新しい公主は帝国に尻尾を振ったらしい' }],
       trait_changes: { aggression: -3, diplomacy: 5 }, perception: '帝国に従順な若君と見られ始めている。',
       situation: '帝国の使者は去ったが、将軍カイラの不満が高まっている。次は国内を固めたい。', terms: [{ term: '皇帝の親書', meaning: '帝国への忠誠を求める手紙' }],
+      location: '城の中庭',
       new_date: '大陸暦812年 春・4日目', summary: '帝国に贈り物を送り衝突を避けた', milestone: '帝国に贈り物を送った', threads: [{ title: '帝国との緊張', stage: '贈り物で一時休戦', status: 'open' }, { title: 'カイラの不満', stage: '将軍が苛立っている', status: 'open' }],
       suggestions: ['将軍カイラをなだめる', 'レオンに使者を送る', '商人同盟と取引を見直す'], ending: null };
     const raw = JSON.stringify(res);
