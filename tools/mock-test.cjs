@@ -40,6 +40,7 @@ window.claude = { use: async (n) => {
     window.__calls.push({ input, opts: { modelTier: opts && opts.modelTier } });
     await new Promise(r => setTimeout(r, 250));
     if (input.includes('"reply"')) return { reply: '……用件は手短に。帝国の使者が来る前に、腹を決めておくことだ。', relation_delta: 2, mood: '思案', memo: '' };
+    if (input.includes('"personas"')) return { personas: [...input.matchAll(/id:([a-z0-9_]+)｜/g)].map((m) => ({ id: m[1], persona: { personality: '寡黙', speech: '一人称は「拙者」', values: '忠義', never: '嘘' } })) };
     if (input.includes('"synopsis"')) return { synopsis: 'ヴェルナ公国の若き公主は帝国に贈り物を送り、衝突を避け続けた。将軍カイラは不満を募らせている。' };
     if (input.includes('"quests"')) return { quests: [{ title: '密輸商人の摘発', desc: '西の港で武器の密輸が行われている。', client: '港の役人', reward: '金貨200' }] };
     const res = {

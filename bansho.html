@@ -72,9 +72,9 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
 /* ---------- 上の帯 ---------- */
-.top { display: flex; align-items: center; gap: 10px; padding-block: 12px 10px; border-bottom: 3px solid var(--accent-2); background: var(--surface); }
-.top .back { color: var(--muted); padding: 4px; margin-left: -4px; }
-.top h1 { font-size: 19px; font-weight: 900; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appbar { display: flex; align-items: center; gap: 10px; padding-block: 12px 10px; border-bottom: 3px solid var(--accent-2); background: var(--surface); }
+.appbar .back { color: var(--muted); padding: 4px; margin-left: -4px; }
+.appbar h1 { font-size: 19px; font-weight: 900; margin: 0; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tier { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 700; color: var(--fg); background: var(--surface); }
 .tier svg { width: 18px; height: 18px; color: var(--accent); }
 .gear { color: var(--accent); padding: 4px; }
@@ -85,6 +85,9 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .mem { display: grid; gap: 2px; font-size: 13px; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
 .mem b { font-size: 12px; color: var(--muted); }
 .synopsis { white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
+.mem .pk { display: inline-block; min-width: 6.5em; color: var(--muted); font-size: 12px; font-weight: 700; }
+.pedit label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 4px; }
+.pedit textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; background: var(--surface); font-size: 14px; font-weight: 400; color: var(--fg); resize: vertical; }
 
 /* ---------- 物語 ---------- */
 .feed { flex: 1; overflow-y: auto; overflow-x: hidden; min-width: 0; padding-block: 16px 20px; display: grid; gap: 14px; align-content: start; -webkit-overflow-scrolling: touch; }
@@ -518,6 +521,20 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     const bad = Store.state === 'error' || Store.state === 'full';
     return `<span id="savestate" class="savestate${bad ? ' bad' : ''}" title="${Store.cloud ? 'claude.ai のあなた専用の保存場所' : 'このブラウザの中'}">${esc(m[Store.state] || '')}</span>`;
   }
+  // 人物設定（性格・口調・価値観・絶対にしないこと）
+  const PERSONA_KEYS = [['personality', '性格'], ['speech', '口調'], ['values', '価値観・目的'], ['never', '絶対にしないこと']];
+  function normPersona(p) {
+    const o = {};
+    PERSONA_KEYS.forEach(([k]) => (o[k] = str(p && p[k]).trim().slice(0, 120)));
+    return o;
+  }
+  const hasPersona = (e) => !!(e.persona && (e.persona.personality || e.persona.speech));
+  function personaLine(e) {
+    if (!hasPersona(e)) return '';
+    return PERSONA_KEYS.map(([k, n]) => (e.persona[k] ? `${n}: ${e.persona[k]}` : '')).filter(Boolean).join('／');
+  }
+  const PERSONA_SCHEMA = '"persona": {"personality": "性格（40字以内）", "speech": "口調。一人称・二人称・語尾・話し方の癖を具体的に（50字以内）", "values": "大事にしているもの・目的（40字以内）", "never": "この人物が絶対にしないこと・言わないこと（40字以内）"}';
+
   // 古い形式の記録を今の形に
   function upgrade(g) {
     g.settings = g.settings || { tier: 'default', tempo: 'brisk' };
@@ -528,7 +545,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     g.milestones = arr(g.milestones);
     g.synopsis = str(g.synopsis);
     g.synopsisUpTo = num(g.synopsisUpTo, 0);
-    g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory) }));
+    g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory), persona: e.persona ? normPersona(e.persona) : undefined }));
     return g;
   }
   // 記録が大きくなりすぎないように（あらすじに畳み込んだ古い年代記から捨てる）
@@ -602,12 +619,12 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         { id: 'q3', title: '新式銃の試作', desc: '商人同盟の技師が、資金さえあれば新しい銃を作れると言う。', client: 'ミレーヌの技師', reward: '技術', status: 'open' },
       ],
       entities: [
-        { id: 'e1', name: 'ガルザ帝国', kind: '国', relation: -20, power: 85, attitude: '値踏み', bond: '宗主気取り', mood: '尊大', desc: '北の大国。老皇帝ヴォルグは領土拡張に執着している。' },
-        { id: 'e2', name: 'ミレーヌ商業同盟', kind: '同盟', relation: 10, power: 55, attitude: '様子見', bond: '取引相手', mood: '計算高い', desc: '西の都市連合。儲かる側につく。' },
-        { id: 'e3', name: '王子レオン', kind: '人物', relation: 0, power: 45, attitude: '対抗心', bond: '隣国の王子', mood: '挑発的', desc: '東のオルト王国の王子。野心家で、敵にも味方にもなりうる。' },
-        { id: 'e4', name: '聖サリエ教国', kind: '国', relation: 20, power: 50, attitude: '好意的', bond: '信仰の友', mood: '穏やか', desc: '南の宗教国家。乱暴な国を嫌う。' },
-        { id: 'e5', name: '宰相ベルナルド', kind: '人物', relation: 40, power: 45, attitude: '慎重', bond: '後見人', mood: '心配', desc: '先代から仕える老臣。慎重な和平派。' },
-        { id: 'e6', name: '将軍カイラ', kind: '人物', relation: 30, power: 50, attitude: '血気', bond: '家臣', mood: '苛立ち', desc: '国軍の若き将。主戦派で、弱腰な主には従わない。' },
+        { id: 'e1', name: 'ガルザ帝国', kind: '国', relation: -20, power: 85, attitude: '値踏み', bond: '宗主気取り', mood: '尊大', desc: '北の大国。老皇帝ヴォルグは領土拡張に執着している。', persona: { personality: '老皇帝ヴォルグの意思がすべて。使者は慇懃だが見下している。', speech: '使者は「〜であらせられる」「陛下の御心」など大仰な敬語。小国を「貴国」と呼びつつ上から物を言う。', values: '領土の拡大と帝国の威信。従う国には寛大、逆らう国は潰す。', never: '対等な同盟を結ぶ。弱みを見せる。' } },
+        { id: 'e2', name: 'ミレーヌ商業同盟', kind: '同盟', relation: 10, power: 55, attitude: '様子見', bond: '取引相手', mood: '計算高い', desc: '西の都市連合。儲かる側につく。', persona: { personality: '損得がすべての商人の連合。愛想はよいが情では動かない。', speech: '代表は「〜でございますな」「お代はこちらで」と商人口調。数字の話を好む。', values: '交易路と利益。勝ちそうな側につく。', never: '見返りのない援助。負け戦への出資。' } },
+        { id: 'e3', name: '王子レオン', kind: '人物', relation: 0, power: 45, attitude: '対抗心', bond: '隣国の王子', mood: '挑発的', desc: '東のオルト王国の王子。野心家で、敵にも味方にもなりうる。', persona: { personality: '野心家で自信家。挑発的だが、実力のある相手は認める。', speech: '一人称は「俺」。二人称は「お前」か「公主殿」（皮肉まじり）。短く断定的に話す。', values: 'オルト王国を大陸の覇者にすること。退屈が嫌い。', never: '格下と見た相手に頭を下げる。卑怯な不意打ち。' } },
+        { id: 'e4', name: '聖サリエ教国', kind: '国', relation: 20, power: 50, attitude: '好意的', bond: '信仰の友', mood: '穏やか', desc: '南の宗教国家。乱暴な国を嫌う。', persona: { personality: '穏やかで秩序を重んじる宗教国家。暴力と背信を嫌う。', speech: '司祭長は「〜でしょう」「神の御心のままに」と柔らかい丁寧語。', values: '信仰と平和、弱き民の保護。', never: '侵略戦争への加担。約束を破った者への支援。' } },
+        { id: 'e5', name: '宰相ベルナルド', kind: '人物', relation: 40, power: 45, attitude: '慎重', bond: '後見人', mood: '心配', desc: '先代から仕える老臣。慎重な和平派。', persona: { personality: '慎重で忠実な老臣。心配性だが芯は強い。', speech: '一人称は「わし」。主を「殿下」と呼ぶ。「〜でございます」「恐れながら」と古風で丁寧。', values: '公国の存続と先代への恩義。若い主の成長。', never: '主を裏切る。無謀な戦を勧める。' } },
+        { id: 'e6', name: '将軍カイラ', kind: '人物', relation: 30, power: 50, attitude: '血気', bond: '家臣', mood: '苛立ち', desc: '国軍の若き将。主戦派で、弱腰な主には従わない。', persona: { personality: '血気盛んで率直。武勇を尊び、臆病を嫌う。', speech: '一人称は「私」。主を「公主」と呼ぶ。言葉は短く荒く、遠慮なく意見する。', values: '国を守る強い軍。兵の命と誇り。', never: '戦わずに降伏する。兵を見捨てる。' } },
       ],
       traits: blankTraits(), perception: '新しい公主がどんな人物か、大陸はまだ知らない。',
       chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'brisk' },
@@ -741,12 +758,13 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   "wallet": {"unit": "通貨の名前（円・金貨など）", "symbol": "記号（¥ など。無ければ空文字）", "balance": 整数},
   "items": [{"name": "持ち物", "icon": "絵文字1つ", "desc": "説明（40字以内）"}],
   "quests": [{"title": "依頼・仕事の名前", "desc": "内容（50字以内）", "client": "依頼主", "reward": "報酬（金額か言葉）"}],
-  "entities": [{"name": "人物や勢力", "kind": "人物 / 組織 / 国 など", "relation": -100〜100（プレイヤーへの好感）, "power": 0〜100（影響力）, "attitude": "態度（6字以内）", "bond": "プレイヤーとの関係（8字以内）", "mood": "今の気分（8字以内）", "desc": "どんな存在か（60字以内）"}],
+  "entities": [{"name": "人物や勢力", "kind": "人物 / 組織 / 国 など", "relation": -100〜100（プレイヤーへの好感）, "power": 0〜100（影響力）, "attitude": "態度（6字以内）", "bond": "プレイヤーとの関係（8字以内）", "mood": "今の気分（8字以内）", "desc": "どんな存在か（60字以内）", ${PERSONA_SCHEMA}}],
   "suggestions": ["最初の行動の例", "…", "…"]
 }
 決まり:
 - stats は 4〜6 個（体力・気力・名声・人脈・戦闘力など、この世界での生き残りと成功に関わる数値）。0 で物語が終わるもの（体力など）は fatal を true。お金は stats ではなく wallet に入れる。
 - profile は 4〜8 個。items は 1〜3 個。quests は 2〜3 個。
+- persona はそれぞれの人物らしさの核。${mode === 'work' ? '原作の人物は、原作での性格・一人称・口調・価値観をできるだけ正確に。' : ''}国や組織なら、その代表者・使者の口調で書く。
 - entities は 5〜8 個。${mode === 'work' ? '原作の主要人物や組織を中心に。まだ知り合いでない人物は relation を 0 付近に。' : '味方・ライバル・敵・中立をまぜる。'}
 - suggestions はちょうど 3 つ。具体的で、性格の違う行動に。`;
   }
@@ -782,6 +800,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         id: 'e' + (i + 1), name: str(e.name, '名もなき者').slice(0, 20), kind: str(e.kind, '人物').slice(0, 8),
         relation: clamp(Math.round(num(e.relation, 0)), -100, 100), power: clamp(Math.round(num(e.power, 50)), 0, 100),
         attitude: str(e.attitude).slice(0, 10), bond: str(e.bond).slice(0, 12), mood: str(e.mood).slice(0, 12), desc: str(e.desc).slice(0, 100),
+        persona: normPersona(e.persona), memory: [],
       })),
       traits: blankTraits(), perception: 'あなたがどんな人物か、まだ誰も知らない。',
       chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'brisk' },
@@ -794,7 +813,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   function worldText(g, { short = false } = {}) {
     const stats = g.stats.map((s) => `- ${s.name}（key:${s.key}）${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''}${short ? '' : ' … ' + s.desc}`).join('\n');
     const prof = g.profile.map((p) => `${p.label}: ${p.value}`).join('／');
-    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
+    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${hasPersona(e) ? '\n    人物設定: ' + personaLine(e) : ''}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
     const traits = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
     const items = g.items.map((i) => i.name).join('、') || 'なし';
     const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
@@ -845,7 +864,8 @@ ${action}
 
 決まり:
 - 結果は今の数値・所持金・持ち物・関係・力に基づいて公平に判定する。足りないもの（お金・力・時間・情報）がある行動は「失敗」か「一部成功」。何でも成功させない。良い策でも代償を伴うことが多い。
-- 【最重要】毎手かならず物語を前に進める。行動の結果を最後まで描き切り（相手の返事や反応だけで止めない）、その結果として新しい出来事・情報・状況の変化を最低1つ起こし、次の場面の入り口（引き）で終える。「〜はあなたの答えを待っている」「〜はあなたを見つめている」のような足踏みで終えない。
+- 【最重要1・人物の一貫性】登場人物は、それぞれの「人物設定」（性格・口調・価値観・絶対にしないこと）と好感度に必ず従う。口調（一人称・語尾）を変えない。好感が低い人物や敵対する人物を、急に協力的・親切・素直にしない。話を進めるためでも、人物に「その人らしくない」言動をさせない。${g.mode === 'work' ? '原作の人物は原作での性格・口調・力関係を守る（原作の台詞の引き写しはしない）。' : ''}
+- 【最重要2・展開】毎手かならず物語を前に進める。ただし進め方は、人物がその人らしく振る舞った結果として（協力しない人物なら、断る・対立する・裏で動く、という形で話が動く）。行動の結果を最後まで描き切り（相手の返事や反応だけで止めない）、その結果として新しい出来事・情報・状況の変化を最低1つ起こし、次の場面の入り口（引き）で終える。「〜はあなたの答えを待っている」「〜はあなたを見つめている」のような足踏みで終えない。
 - プレイヤーが台詞だけを書いた場合も、相手の返事 → その帰結 → 次の展開まで進める。プレイヤーが迷っている・様子を見る場合は、世界の側から出来事を起こす（来訪者・知らせ・事件・敵の動きなど）。
 - 「流れに任せて進める」行動なら、プレイヤーの人物らしい自然な行動を選んで進め、物語が大きく動く次の出来事まで描く。
 - 「時間を進める」行動なら、その間の出来事を要約して語り、日付を大きく進め、各勢力の動きを多めに入れる。
@@ -867,7 +887,7 @@ ${action}
   "quest_changes": [{"id": "既存の id（新規なら省略）", "title": "名前", "desc": "内容", "client": "依頼主", "reward": "報酬", "status": "open/taken/done/failed"}],
   "profile_changes": [{"label": "項目", "value": "新しい値"}],
   "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "note": "この手での出来事（30字以内）", "memory": "この人物がこの先もずっと覚えておくこと（約束・恩・恨み・秘密の共有など。無ければ空文字。30字以内）"}],
-  "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "desc": "どんな存在か"}],
+  "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "desc": "どんな存在か", ${PERSONA_SCHEMA}}],
   "world_events": [{"actor": "動いた人物・勢力", "text": "何をしたか（50字以内）"}],
   "news": [{"source": "噂の出どころ", "headline": "世間の受け止め（40字以内）"}],
   "trait_changes": {"aggression": 整数, "diplomacy": 整数, "cunning": 整数, "mercy": 整数, "ambition": 整数, "honor": 整数},
@@ -932,7 +952,7 @@ ${action}
     arr(r.new_entities).slice(0, 2).forEach((n) => {
       const name = str(n.name).slice(0, 20);
       if (!name || g.entities.some((e) => e.name === name) || g.entities.length >= 16) return;
-      g.entities.push({ id: 'n' + uid(), name, kind: str(n.kind, '人物').slice(0, 8), relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100), attitude: str(n.attitude).slice(0, 10), bond: str(n.bond).slice(0, 12), mood: str(n.mood).slice(0, 12), desc: str(n.desc).slice(0, 100), memory: [], isNew: g.turn + 1 });
+      g.entities.push({ id: 'n' + uid(), name, kind: str(n.kind, '人物').slice(0, 8), relation: clamp(Math.round(num(n.relation, 0)), -100, 100), power: clamp(Math.round(num(n.power, 40)), 0, 100), attitude: str(n.attitude).slice(0, 10), bond: str(n.bond).slice(0, 12), mood: str(n.mood).slice(0, 12), desc: str(n.desc).slice(0, 100), persona: normPersona(n.persona), memory: [], isNew: g.turn + 1 });
       chips.push({ label: '出会い: ' + name, delta: 1, text: true });
     });
     const tc = r.trait_changes && typeof r.trait_changes === 'object' ? r.trait_changes : {};
@@ -1002,7 +1022,7 @@ ${action}
     }
     S.busy = false;
     renderGame();
-    maybeCompress();
+    maybeCompress().then(() => maybeFillPersonas());
   }
 
   // 年代記がたまったら、古い分を「これまでのあらすじ」に畳み込む（プレイヤーの 1 手に続けて 1 回だけ）
@@ -1050,6 +1070,8 @@ JSON だけを返す: {"synopsis": "新しいあらすじ"}`, { cache: false, mo
 ${worldText(g, { short: true })}
 
 【${e.name}について】${e.kind}。${e.desc}
+【人物設定（必ず守る）】
+${hasPersona(e) ? PERSONA_KEYS.map(([k, n]) => `- ${n}: ${e.persona[k] || '—'}`).join('\n') : '（未設定。' + e.name + 'の立場と説明から、一貫した人物として演じる）'}
 プレイヤーへの好感 ${e.relation}（−100〜100）／関係「${e.bond || '-'}」／態度「${e.attitude || '-'}」／気分「${e.mood || '-'}」${e.note ? '／最近: ' + e.note : ''}
 【${e.name}が覚えていること】${arr(e.memory).length ? arr(e.memory).join('／') : 'とくになし'}
 【最近の年代記】
@@ -1058,10 +1080,42 @@ ${g.chronicle.slice(-6).join('\n') || 'なし'}
 ${hist || '（はじめて）'}
 プレイヤー: ${text}
 
-決まり: ${e.name}の性格・立場・好感の度合いに合った口調と態度で、2〜5文で答える。好感が低ければ冷たく、警戒していれば探りを入れる。${g.mode === 'work' ? '原作の人物なら原作の性格に忠実に（原作の台詞をそのまま使わない）。' : ''}プレイヤーに都合のよすぎる約束はしない。
-会話を毎回一歩進める: はぐらかすだけで終えず、質問には知っている範囲で具体的に答え、情報を明かす・提案する・条件を出す・頼みごとをする・行動を約束する・断るなど、なにか一つは状況を動かす。相手から話題を持ち出してもよい。
+決まり:
+- 【最重要】${e.name}の人物設定（性格・口調・価値観・絶対にしないこと）を必ず守る。一人称・語尾・話し方の癖を、これまでのやり取りと同じに保つ。${g.mode === 'work' ? '原作の人物なら原作での性格・口調に忠実に（原作の台詞をそのまま使わない）。' : ''}
+- 好感度に見合った態度で。好感が低い・警戒している相手には冷たく、簡単に心を開かない。プレイヤーに好かれるために性格を曲げない。都合のよすぎる約束はしない。
+- 2〜5文で答える。はぐらかすだけで終えず、${e.name}らしいやり方で何か一つは状況を動かす（情報を少し明かす・条件を出す・試す・頼む・きっぱり断る・脅す など。どれを選ぶかは性格次第）。
 次の JSON だけを返す:
 {"reply": "${e.name}の返事", "relation_delta": -5〜5 の整数, "mood": "今の気分（8字以内）", "memo": "約束・告白・取引・決裂など、${e.name}がこの先も覚えておくべき内容なら一行（30字以内）、無ければ空文字"}`;
+  }
+
+  // 人物設定が空の人物に、AI で人物設定を作る（古い記録や途中で増えた人物向け）
+  async function fillPersonas(g, list) {
+    const smp = await getSample();
+    if (!smp || !list.length) return false;
+    const r = await smp.json(`あなたは対話型シミュレーションゲームの設定係。次の世界の登場人物・勢力それぞれに、演じ分けるための「人物設定」を作る。${g.mode === 'work' ? `この世界は既存の作品「${str(g.source && g.source.work)}」が元。原作の人物は、原作での性格・一人称・口調・価値観をできるだけ正確に。` : ''}国や組織は、その代表者・使者の口調で。
+
+【世界】${g.title}／${g.premise}
+【人物・勢力】
+${list.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜${e.desc}｜関係「${e.bond || '-'}」${(arr(g.chats[e.id]).filter((m) => m.role === 'them').slice(-3).map((m) => '｜これまでの発言「' + str(m.text).slice(0, 60) + '」').join(''))}`).join('\n')}
+
+JSON だけを返す: {"personas": [{"id": "id", ${PERSONA_SCHEMA}}]}`, { cache: false, modelTier: 'default' });
+    let n = 0;
+    arr(r && r.personas).forEach((x) => {
+      const e = g.entities.find((y) => y.id === str(x.id));
+      if (e && !hasPersona(e)) { e.persona = normPersona(x.persona); if (hasPersona(e)) n++; }
+    });
+    return n > 0;
+  }
+
+  // 1 手の後、人物設定のない人物がいれば作っておく（1 回だけ）
+  async function maybeFillPersonas() {
+    const g = S.G;
+    if (!g || S.fillingPersona) return;
+    const missing = g.entities.filter((e) => !hasPersona(e)).slice(0, 8);
+    if (!missing.length) return;
+    S.fillingPersona = true;
+    try { if (await fillPersonas(g, missing) && S.G === g) save(); } catch { /* 次の手でまた */ }
+    S.fillingPersona = false;
   }
 
   async function sendChat(eid, text) {
@@ -1076,6 +1130,7 @@ ${hist || '（はじめて）'}
     list.push({ role: 'me', text: text.slice(0, 400), date: g.date });
     S.chatBusy = true; renderSheet();
     try {
+      if (!hasPersona(e)) { try { await fillPersonas(g, [e]); } catch { /* 無くても会話はできる */ } }
       S.ctl = new AbortController();
       const r = await S.sample.json(chatPrompt(g, e, before, text), { signal: S.ctl.signal, cache: false, modelTier: tierOf() });
       list.push({ role: 'them', text: str(r && r.reply, '……').slice(0, 600), date: g.date });
@@ -1173,7 +1228,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     const sugg = !ended && !S.busy ? `<div class="sugg pad"><button class="go" id="progress">${ic('arrowR')}物語を進める</button>${S.showSugg ? arr(g.suggestions).map((s) => `<button data-sugg="${esc(s)}">${esc(s)}</button>`).join('') : ''}</div>` : '';
     const openQ = g.quests.filter((q) => q.status === 'open').length;
     app.innerHTML = `
-      <div class="top pad"><button class="back" id="home" aria-label="題へ戻る">${ic('back')}</button><h1>${esc(g.title)}</h1>
+      <div class="appbar pad"><button class="back" id="home" aria-label="題へ戻る">${ic('back')}</button><h1>${esc(g.title)}</h1>
         ${saveBadge()}
         <button class="tier" id="tier" title="AI の考え方">${ic('spark')}${TIERS[tierOf()]}</button>
         <button class="gear" id="gear" aria-label="設定">${ic('gear')}</button></div>
@@ -1229,7 +1284,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   }
 
   function openSheet(k) {
-    S.sheet = k; S.full = false; S.toast = ''; S.chatWith = null; S.itemSel = null; S.histOpen = false;
+    S.sheet = k; S.full = false; S.toast = ''; S.chatWith = null; S.itemSel = null; S.histOpen = false; S.editPersona = null;
     app.querySelectorAll('.tabbar [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
     renderSheet();
   }
@@ -1258,6 +1313,16 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       <p class="sec">立場と目的</p><div class="box"><div>${esc(g.role)}</div>${g.goal ? `<div class="muted" style="margin-top:6px">目指すもの：${esc(g.goal)}</div>` : ''}</div>`;
   }
   function relColor(r) { return r >= 40 ? 'var(--good)' : r >= 0 ? 'var(--accent)' : r > -40 ? 'var(--warn)' : 'var(--bad)'; }
+  function personaBlock(e) {
+    if (S.editPersona === e.id) {
+      const p = e.persona || {};
+      return `<div class="mem pedit"><b>人物設定を直す（AI はこれを必ず守ります）</b>${PERSONA_KEYS.map(([k, n]) => `<label>${n}<textarea data-pk="${k}" maxlength="120" rows="2">${esc(p[k] || '')}</textarea></label>`).join('')}
+        <div class="row"><button class="btn primary" data-psave="${esc(e.id)}">保存</button><button class="btn" data-pcancel="1">やめる</button></div></div>`;
+    }
+    if (!hasPersona(e)) return `<div class="mem"><b>人物設定</b><div>まだありません。話しかけると AI が作ります。</div><button class="btn" data-pedit="${esc(e.id)}" style="justify-self:start;margin-top:4px">自分で書く</button></div>`;
+    return `<div class="mem"><b>人物設定</b>${PERSONA_KEYS.map(([k, n]) => (e.persona[k] ? `<div><span class="pk">${n}</span>${esc(e.persona[k])}</div>` : '')).join('')}<button class="btn" data-pedit="${esc(e.id)}" style="justify-self:start;margin-top:4px">${ic('pen')}直す</button></div>`;
+  }
+
   function sheetPeople(g) {
     return [...g.entities].sort((a, b) => b.power - a.power).map((e) => {
       const r = e.relation;
@@ -1269,6 +1334,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         <div class="tline"><span>態度</span><b>${esc(e.attitude || '—')}</b></div>
         <div class="tline"><span>気分</span><b>${esc(e.mood || '—')}</b></div>
         <div class="muted">${esc(e.note ? '最近: ' + e.note : e.desc)}</div>
+        ${personaBlock(e)}
         ${arr(e.memory).length ? `<div class="mem"><b>${esc(e.name)}が覚えていること</b>${arr(e.memory).slice().reverse().map((m) => `<div>${esc(m)}</div>`).join('')}</div>` : ''}
         <button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button></div>`;
     }).join('');
@@ -1347,6 +1413,18 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('skip')) $('skip').onclick = () => sendAction('（時間を進める）次の大きな出来事が起きるまで時間を進める。その間の日々は要約して語る。');
     if ($('jumpgo')) $('jumpgo').onclick = () => { const v = $('jump').value.trim(); if (v) sendAction(`（時間を進める）「${v}」まで時間を進める。その間の出来事は要約して語る。`); };
     if ($('pace')) $('pace').onchange = (e) => { g.settings.tempo = e.target.value; save(); };
+    app.querySelectorAll('[data-pedit]').forEach((b) => b.onclick = () => { S.editPersona = b.dataset.pedit; renderSheet(); });
+    app.querySelectorAll('[data-pcancel]').forEach((b) => b.onclick = () => { S.editPersona = null; renderSheet(); });
+    app.querySelectorAll('[data-psave]').forEach((b) => b.onclick = () => {
+      const e = g.entities.find((x) => x.id === b.dataset.psave);
+      if (!e) return;
+      const box = b.closest('.pedit');
+      const p = {};
+      box.querySelectorAll('[data-pk]').forEach((t) => (p[t.dataset.pk] = t.value));
+      e.persona = normPersona(p);
+      S.editPersona = null; S.variants = null;
+      save(); renderSheet();
+    });
     app.querySelectorAll('[data-talk]').forEach((b) => b.onclick = () => { S.sheet = 'chat'; S.chatWith = b.dataset.talk; app.querySelectorAll('.tabbar [data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'chat'))); renderSheet(); });
     app.querySelectorAll('[data-chat]').forEach((b) => b.onclick = () => { S.chatWith = b.dataset.chat; S.toast = ''; renderSheet(); });
     if ($('chatgo')) $('chatgo').onclick = () => { const e = g.entities.find((x) => x.id === S.chatWith); if (e) sendAction(`（${e.name}との会話を踏まえて）話し合ったことを実行に移し、物語を進める。`); };
