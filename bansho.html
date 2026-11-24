@@ -69,7 +69,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-.app { height: 100%; display: flex; flex-direction: column; max-width: 820px; margin: 0 auto; position: relative; overflow-x: hidden; }
+.app { height: 100%; display: flex; flex-direction: column; max-width: min(820px, var(--appw, 100%)); margin: 0 auto; position: relative; overflow-x: hidden; }
 .app > * { min-width: 0; }
 .pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 
@@ -81,7 +81,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .tier svg { width: 18px; height: 18px; color: var(--accent); }
 .gear { color: var(--accent); padding: 4px; }
 .savestate { font-size: 11px; color: var(--muted); white-space: nowrap; }
-@media (max-width: 400px) { .savestate { display: none; } .tier { padding: 4px 10px; } }
+@media (max-width: 400px), (pointer: coarse) { .appbar .savestate { display: none; } .tier { padding: 4px 10px; } }
+.app { width: var(--appw, 100%); margin-left: var(--appml, auto); }
 .savestate.bad { color: var(--bad); font-weight: 700; }
 .more { justify-self: center; font-size: 13px; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 14px; }
 .mem { display: grid; gap: 2px; font-size: 13px; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
@@ -555,6 +556,12 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   }
   const PERSONA_SCHEMA = '"persona": {"personality": "性格（40字以内）", "speech": "口調。一人称・二人称・語尾・話し方の癖を具体的に（50字以内）", "values": "大事にしているもの・目的（40字以内）", "never": "この人物が絶対にしないこと・言わないこと（40字以内）"}';
 
+  // あなたの人物（強さ・能力の判定に毎手使う）
+  const PLAYER_KEYS = [['name', '名前'], ['abilities', '能力・術・技'], ['power', '強さ（原作の基準で）'], ['limits', '弱点・制約']];
+  function normPlayer(p) { const o = {}; PLAYER_KEYS.forEach(([k]) => (o[k] = str(p && p[k]).trim().slice(0, 300))); return o; }
+  const hasPlayer = (g) => !!(g.player && (g.player.abilities || g.player.power));
+  const PLAYER_SCHEMA = '"player": {"name": "プレイヤーの人物の名前", "abilities": "能力・術・技・得意なこと（120字以内。設定にあれば具体的に）", "power": "強さ。原作の強さの基準（等級など）に当てはめて、誰と互角・誰より上/下かまで（80字以内）", "limits": "弱点・制約・消耗の仕方（80字以内）"}';
+
   // 古い形式の記録を今の形に
   function upgrade(g) {
     g.settings = g.settings || { tier: 'default', tempo: 'normal' };
@@ -567,6 +574,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     g.glossary = arr(g.glossary);
     g.canon = str(g.canon);
     g.location = str(g.location);
+    g.lore = str(g.lore);
+    g.player = g.player && typeof g.player === 'object' ? normPlayer(g.player) : null;
     g.synopsis = str(g.synopsis);
     g.synopsisUpTo = num(g.synopsisUpTo, 0);
     g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory), persona: e.persona ? normPersona(e.persona) : undefined }));
@@ -584,6 +593,22 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   }
   function save(opts) { if (S.G) Store.save(S.G, opts); }
   Store.init();
+
+  // スマホのアプリによっては、ページを実際の画面より広い幅で描くことがある。画面の本当の幅に合わせる。
+  function fitToScreen() {
+    try {
+      const sw = Math.min(screen.width, screen.height);
+      const sh = Math.max(screen.width, screen.height);
+      const landscape = matchMedia('(orientation: landscape)').matches;
+      const real = landscape ? sh : sw;
+      const coarse = matchMedia('(pointer: coarse)').matches;
+      if (coarse && real > 200 && innerWidth > real + 2) { document.documentElement.style.setProperty('--appw', real + 'px'); document.documentElement.style.setProperty('--appml', '0px'); }
+      else { document.documentElement.style.removeProperty('--appw'); document.documentElement.style.removeProperty('--appml'); }
+    } catch { /* 何もしない */ }
+  }
+  fitToScreen();
+  addEventListener('resize', fitToScreen);
+  addEventListener('orientationchange', () => setTimeout(fitToScreen, 300));
 
   // ---------- AI ----------
   // AI の準備（数秒かかることがある）。準備前に送られたら、終わるまで待つ。
@@ -749,6 +774,10 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         const w = await S.sample.json(genPrompt(work ? 'work' : 'custom', inp), { signal: S.ctl.signal });
         S.G = upgrade(normalizeWorld(w, work ? 'work' : 'custom', inp));
         S.feedLimit = 60;
+        if (work) {
+          st.textContent = '原作資料をまとめています…（1分ほど）';
+          try { await buildLore(S.G); } catch { /* あとで作る */ }
+        }
         S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
         save(); renderGame();
       } catch (e) {
@@ -784,11 +813,13 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   "items": [{"name": "持ち物", "icon": "絵文字1つ", "desc": "説明（40字以内）"}],
   "quests": [{"title": "依頼・仕事の名前", "desc": "内容（50字以内）", "client": "依頼主", "reward": "報酬（金額か言葉）"}],
   "entities": [{"name": "人物や勢力", "kind": "人物 / 組織 / 国 など", "relation": -100〜100（プレイヤーへの好感）, "power": 0〜100（影響力）, "attitude": "態度（6字以内）", "bond": "プレイヤーとの関係（8字以内）", "mood": "今の気分（8字以内）", "desc": "どんな存在か（60字以内）", ${PERSONA_SCHEMA}}],
-  "suggestions": ["最初の行動の例", "…", "…"]${mode === 'work' ? ',\n  "canon": "原作でのこの時期の状況・人物たちの立場・この後に原作で起きる大きな出来事の流れ（250字以内）"' : ''}
+  "suggestions": ["最初の行動の例", "…", "…"],
+  ${PLAYER_SCHEMA}${mode === 'work' ? ',\n  "canon": "原作でのこの時期の状況・人物たちの立場・この後に原作で起きる大きな出来事の流れ（250字以内）"' : ''}
 }
 決まり:
 - stats は 4〜6 個（体力・気力・名声・人脈・戦闘力など、この世界での生き残りと成功に関わる数値）。0 で物語が終わるもの（体力など）は fatal を true。お金は stats ではなく wallet に入れる。
 - profile は 4〜8 個。items は 1〜3 個。quests は 2〜3 個。
+- player はプレイヤーの人物の設定を、書かれた内容に忠実にまとめる（書かれた強さ・能力を弱めない）。
 - persona はそれぞれの人物らしさの核。${mode === 'work' ? '原作の人物は、原作での性格・一人称・口調・価値観をできるだけ正確に。' : ''}国や組織なら、その代表者・使者の口調で書く。
 - entities は 5〜8 個。${mode === 'work' ? '原作の主要人物や組織を中心に。まだ知り合いでない人物は relation を 0 付近に。' : '味方・ライバル・敵・中立をまぜる。'}
 - suggestions はちょうど 3 つ。具体的で、性格の違う行動に。`;
@@ -830,7 +861,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
       traits: blankTraits(), perception: 'あなたがどんな人物か、まだ誰も知らない。',
       chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'normal' },
       suggestions: arr(w.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80)),
-      status: 'playing', intro: str(w.intro, 'あなたの物語が始まる。'), canon: str(w.canon).slice(0, 500), glossary: [],
+      status: 'playing', intro: str(w.intro, 'あなたの物語が始まる。'), canon: str(w.canon).slice(0, 500), glossary: [], player: w.player ? normPlayer(w.player) : null, lore: '',
     };
   }
 
@@ -844,7 +875,11 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
     return `【世界】${g.title}
 ${g.premise}
-【プレイヤー】${g.role}
+【プレイヤー】${g.role}${hasPlayer(g) ? `
+【プレイヤーの人物】（強さ・能力の判定はこれに従う）
+${PLAYER_KEYS.map(([k, n]) => `- ${n}: ${g.player[k] || '—'}`).join('\n')}` : ''}${g.lore ? `
+【原作資料】（世界のルール・強さの基準・人物の能力。必ず従う）
+${g.lore}` : ''}
 【目指すもの】${g.goal || '自由'}
 【現在】${g.date}（${g.turn + 1}手目）
 【いる場所】${g.location || '（未設定。今回の本文から決めて location に書く）'}
@@ -923,7 +958,8 @@ ${action}
 - プレイヤーが台詞だけを書いた場合も、相手の返事 → その帰結 → 次の展開まで進める。プレイヤーが迷っている・様子を見る場合は、世界の側から出来事を起こす（来訪者・知らせ・事件・敵の動きなど）。
 - 「流れに任せて進める」行動なら、プレイヤーの人物らしい自然な行動を選んで進め、物語が大きく動く次の出来事まで描く。
 - 「時間を進める」行動なら、その間の出来事を要約して語り、日付を大きく進め、各勢力の動きを多めに入れる。
-- 数値の変化は stat_changes（1手で普通 ±1〜10、大事件でも ±25 まで）。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes（持ち物は物語の鍵になる大事な物だけ。ありふれた物・消耗品・お金で買える雑貨は持ち物にしない。1手で増やすのは多くて1つ。持ち物は${ITEM_MAX}個まで（今${g.items.length}個）。使い切った・渡した・壊れた物は remove）。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
+- 【強さの判定】勝ち負け・成否は【プレイヤーの人物】の強さと【原作資料】の基準で公平に判定する。プレイヤーの人物を設定より弱く扱わない（格下相手に苦戦させない、能力を理由なく不発にしない）。原作の強者も原作どおりに強い。数で囲まれた・場所が悪い等で不利になる場合は、その理由を本文で書く。
+- 数値の変化は stat_changes。消耗（体力・呪力・魔力など）は行動の規模と本人の強さに見合う分だけ: 強い人物の小技や威嚇はほぼ減らない（0〜-2）、普通の戦闘で -3〜-6、全力の大技でも -12 まで。休む・時間が経つと回復させる。大事件以外の増減は ±1〜10。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes（持ち物は物語の鍵になる大事な物だけ。ありふれた物・消耗品・お金で買える雑貨は持ち物にしない。1手で増やすのは多くて1つ。持ち物は${ITEM_MAX}個まで（今${g.items.length}個）。使い切った・渡した・壊れた物は remove）。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
 - 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に。
 - 世界はプレイヤーの「傾向」を覚えて対応を変える（好戦的なら他が手を組んで警戒、約束破りなら信用されない、慈悲深ければ慕われる、謀略が多ければ密偵を警戒される）。今回強まった傾向を trait_changes に。
 - 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果はあなたが判定する。${workRule}
@@ -965,7 +1001,7 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
       const s = g.stats.find((x) => x.key === str(c.key) || x.name === str(c.key));
       if (!s) return;
       const before = s.value;
-      s.value = clamp(s.value + clamp(Math.round(num(c.delta, 0)), -25, 25), s.min, s.max);
+      s.value = clamp(s.value + clamp(Math.round(num(c.delta, 0)), -12, 25), s.min, s.max);
       if (s.value !== before) chips.push({ label: s.name, delta: s.value - before });
     });
     arr(r.money_changes).slice(0, 4).forEach((m) => {
@@ -1107,7 +1143,7 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
     }
     S.busy = false;
     renderGame();
-    maybeCompress().then(() => maybeFillPersonas()).then(() => maybeFillCanon());
+    maybeCompress().then(() => maybeFillPersonas()).then(() => maybeFillCanon()).then(() => maybeFillLore());
   }
 
   // 「？ 状況を説明して」: 物語は進めず、今の状況を平易に説明する
@@ -1140,6 +1176,55 @@ JSON だけを返す: {"explain": "説明"}`, { signal: S.ctl.signal, cache: fal
   }
 
   // 作品世界で「原作でのこの時期の状況」がない古い記録に、1 回だけ作る
+  // 原作資料: AI が知っている原作の知識を、世界のルール・強さの基準・人物の能力に分けて書き出す（一番賢い設定で 1 回）
+  async function buildLore(g) {
+    const smp = await getSample();
+    if (!smp) return false;
+    const work = str(g.source && g.source.work);
+    const r = await smp.json(`あなたは既存の作品「${work}」に詳しい資料係。この作品を元にしたシミュレーションゲームのために、ゲームマスターが毎回参照する「原作資料」を作る。あなたが原作について確実に知っていることだけを書き、知らない・あいまいなことは書かない（推測で設定を作らない）。
+
+【ゲームの世界】${g.title}／${g.premise}
+【今の時期】${g.date}
+【主な登場人物】${g.entities.map((e) => e.name).join('、')}
+
+次の見出しで、日本語で合計 1500 字以内:
+■世界のルール（力の仕組み・用語。例: 呪力・術式・領域展開・縛り・結界 など、その作品の基本ルール）
+■強さの基準（等級・ランク・格付けと、目安になる人物）
+■主要人物の能力と強さ（上の人物それぞれ: 術式・得意技・強さの格・弱点。1人2行まで）
+■組織と立場（主な組織・役職・人間関係）
+■この時期の状況と、この後に原作で起きる大きな出来事
+JSON だけを返す: {"lore": "原作資料の本文"}`, { cache: false, modelTier: 'complex' });
+    const t = str(r && r.lore).trim();
+    if (t) { g.lore = t.slice(0, 2600); return true; }
+    return false;
+  }
+  async function buildPlayer(g) {
+    const smp = await getSample();
+    if (!smp) return false;
+    const r = await smp.json(`シミュレーションゲームのプレイヤーの人物の設定を、強さの判定に使える形にまとめる。プレイヤーが最初に書いた設定を最優先し、書かれた強さ・能力を弱めない。${g.mode === 'work' ? `作品「${str(g.source && g.source.work)}」の強さの基準に当てはめる。` : ''}
+【プレイヤーが書いた設定】${str(g.source && g.source.char) || g.role}
+【立場】${g.role}
+${g.lore ? '【原作資料】\n' + g.lore.slice(0, 1500) : ''}
+JSON だけを返す: {${PLAYER_SCHEMA}}`, { cache: false, modelTier: 'default' });
+    if (r && r.player) { g.player = normPlayer(r.player); return hasPlayer(g); }
+    return false;
+  }
+  async function maybeFillLore() {
+    const g = S.G;
+    if (!g || S.fillingLore) return;
+    const needLore = g.mode === 'work' && !g.lore;
+    const needPlayer = !hasPlayer(g);
+    if (!needLore && !needPlayer) return;
+    S.fillingLore = true;
+    try {
+      let changed = false;
+      if (needLore) changed = (await buildLore(g)) || changed;
+      if (needPlayer) changed = (await buildPlayer(g)) || changed;
+      if (changed && S.G === g) save();
+    } catch { /* 次の手で */ }
+    S.fillingLore = false;
+  }
+
   async function maybeFillCanon() {
     const g = S.G;
     if (!g || g.mode !== 'work' || g.canon || S.fillingCanon) return;
@@ -1423,7 +1508,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   }
 
   function openSheet(k) {
-    S.sheet = k; S.full = false; S.toast = ''; S.chatWith = null; S.itemSel = null; S.histOpen = false; S.editPersona = null;
+    S.sheet = k; S.full = false; S.toast = ''; S.chatWith = null; S.itemSel = null; S.histOpen = false; S.editPersona = null; S.editPlayer = false;
     app.querySelectorAll('.tabbar [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
     renderSheet();
   }
@@ -1443,6 +1528,14 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       <label class="selrow">${ic('gauge')}<b>展開の速さ</b><select id="pace">${Object.entries(TEMPOS).map(([k, v]) => `<option value="${k}" ${tempoOf(g) === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <p class="muted" style="margin:-4px 4px 0">テンポよく: 途中を飛ばしてどんどん進む／ふつう: 1手で場面が1つ進む／じっくり: 会話や描写を丁寧に。</p>`;
   }
+  function playerBlock(g) {
+    const p = g.player || {};
+    if (S.editPlayer) return `<div class="box mem pedit"><b>あなたの人物を直す（AI はこれを必ず守ります）</b>${PLAYER_KEYS.map(([k, n]) => `<label>${n}<textarea data-plk="${k}" maxlength="300" rows="3">${esc(p[k] || '')}</textarea></label>`).join('')}
+      <div class="row"><button class="btn primary" id="plsave">保存</button><button class="btn" id="plcancel">やめる</button></div></div>`;
+    if (!hasPlayer(g)) return `<div class="box mem"><div>まだありません。次の1手のあとに AI が作ります。</div><button class="btn" id="pledit" style="justify-self:start;margin-top:4px">${ic('pen')}自分で書く</button></div>`;
+    return `<div class="box mem">${PLAYER_KEYS.map(([k, n]) => (p[k] ? `<div><span class="pk">${n}</span>${esc(p[k])}</div>` : '')).join('')}<button class="btn" id="pledit" style="justify-self:start;margin-top:4px">${ic('pen')}直す</button></div>`;
+  }
+
   function sheetStat(g) {
     const nums = g.stats.map((s) => `<div class="sitem"><div class="top"><span>${esc(s.name)}</span><b class="${statBarCls(s) === 'red' ? 'low' : ''}">${s.value}</b></div><div class="bar ${statBarCls(s)}"><i style="width:${(((s.value - s.min) / (s.max - s.min)) * 100).toFixed(1)}%"></i></div><div class="desc">${esc(s.desc)}${s.fatal ? '（0で終幕）' : ''}</div></div>`).join('');
     const prof = g.profile.map((p) => `<div class="sitem"><div class="top"><span>${esc(p.label)}</span><span class="txt">${esc(p.value)}</span></div></div>`).join('');
@@ -1450,6 +1543,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     return `<div class="box"><div class="sgrid">${nums}</div></div>
       ${prof ? `<p class="sec">プロフィール</p><div class="box"><div class="sgrid">${prof}</div></div>` : ''}
       <p class="sec">世界から見たあなた（50が普通）</p><div class="box"><div class="sgrid">${traits}</div><p class="muted" style="margin:8px 0 0">${esc(g.perception)}</p></div>
+      <p class="sec">あなたの人物（強さの判定に毎手使います）</p>${playerBlock(g)}
       <p class="sec">立場と目的</p><div class="box"><div>${esc(g.role)}</div>${g.goal ? `<div class="muted" style="margin-top:6px">目指すもの：${esc(g.goal)}</div>` : ''}</div>`;
   }
   function relColor(r) { return r >= 40 ? 'var(--good)' : r >= 0 ? 'var(--accent)' : r > -40 ? 'var(--warn)' : 'var(--bad)'; }
@@ -1527,6 +1621,9 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     return `<label class="selrow">${ic('spark')}<b>AI の考え方</b><select id="tiersel">${Object.entries(TIERS).map(([k, v]) => `<option value="${k}" ${tierOf() === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <p class="muted" style="margin:-4px 4px 0">速い: すぐ返るが判定は大まか／標準: ふつう／じっくり: 時間はかかるが筋の通った展開に。</p>
       <div class="box"><b>${esc(g.title)}</b><div class="muted" style="margin-top:4px">${esc(g.premise)}</div></div>
+      ${g.mode === 'work' ? `<div class="box" style="display:grid;gap:6px"><b>原作資料</b><span class="muted">AI が知っている原作の知識をまとめたもの。毎手これに従います。間違いや足りない設定は書き直してください（例: 人物の術式・強さ・世界のルール）。</span>
+        <textarea id="lore" rows="10" maxlength="3000" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface-2);font-size:13.5px;line-height:1.7">${esc(g.lore)}</textarea>
+        <div class="row" style="flex-wrap:wrap"><button class="btn primary" id="loresave">保存</button><button class="btn" id="loregen" ${S.busy || S.fillingLore ? 'disabled' : ''}>${S.fillingLore ? 'まとめています…' : 'AI に作り直させる'}</button><span class="muted" id="lorest"></span></div></div>` : ''}
       <div class="box"><b>記録の保存先</b><div class="muted" style="margin-top:4px">${Store.cloud ? 'claude.ai のあなた専用の保存場所（あなた以外は読めません）。PC とスマホで同じ続きを遊べます。' : 'このブラウザの中だけ。ブラウザのデータを消すと失われます。'}<br>物語 ${g.log.length} 件・年代記 ${g.chronicle.length} 行・あらすじに畳んだ出来事 ${g.synopsisUpTo} 件</div></div>
       <button class="act-btn" id="tohome"><span class="ico">${ic('back')}</span><span><b>題へ戻る</b><small>記録は自動で保存されています</small></span></button>
       <button class="btn danger" id="delw" style="justify-self:start">この世界の記録を消す</button>`;
@@ -1592,6 +1689,19 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('qref')) $('qref').onclick = () => { S.toast = ''; refreshQuests(); };
     if ($('tiersel')) $('tiersel').onchange = (e) => { g.settings.tier = e.target.value; save(); const t = $('tier'); if (t) t.innerHTML = ic('spark') + TIERS[tierOf()]; };
     if ($('tohome')) $('tohome').onclick = () => renderTitle();
+    if ($('pledit')) $('pledit').onclick = () => { S.editPlayer = true; renderSheet(); };
+    if ($('plcancel')) $('plcancel').onclick = () => { S.editPlayer = false; renderSheet(); };
+    if ($('plsave')) $('plsave').onclick = () => {
+      const p = {};
+      app.querySelectorAll('[data-plk]').forEach((t) => (p[t.dataset.plk] = t.value));
+      g.player = normPlayer(p); S.editPlayer = false; S.variants = null; save(); renderSheet();
+    };
+    if ($('loresave')) $('loresave').onclick = () => { g.lore = $('lore').value.trim().slice(0, 3000); S.variants = null; save(); $('lorest').textContent = '保存しました'; };
+    if ($('loregen')) $('loregen').onclick = async () => {
+      S.fillingLore = true; renderSheet();
+      try { if (await buildLore(g)) { S.variants = null; save(); } } catch (e) { S.toast = aiMsg(e); }
+      S.fillingLore = false; renderSheet();
+    };
     if ($('delw')) $('delw').onclick = async (e) => { const b = e.currentTarget; if (b.dataset.armed) { b.disabled = true; b.textContent = '消しています…'; try { await Store.remove(g.id); } catch { /* 無視 */ } renderTitle(); } else { b.dataset.armed = '1'; b.textContent = '本当に消す（元に戻せません）'; } };
   }
 
