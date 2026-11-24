@@ -543,6 +543,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     g.profile = arr(g.profile); g.items = arr(g.items); g.quests = arr(g.quests); g.news = arr(g.news); g.log = arr(g.log); g.chronicle = arr(g.chronicle);
     g.wallet = g.wallet || { unit: '円', symbol: '', balance: 0, history: [] };
     g.milestones = arr(g.milestones);
+    g.threads = arr(g.threads);
     g.synopsis = str(g.synopsis);
     g.synopsisUpTo = num(g.synopsisUpTo, 0);
     g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory), persona: e.persona ? normPersona(e.persona) : undefined }));
@@ -839,9 +840,23 @@ ${g.milestones.length ? g.milestones.map((m) => '- ' + m).join('\n') : 'まだ�
   }
 
   // ================= 1 手 =================
+  const ITEM_MAX = 8;
+  // 最近使った出来事・言い回し（繰り返し防止のため AI に見せる）
+  function recentBeats(g) {
+    const res = g.log.filter((l) => l.t === 'res').slice(-8);
+    const events = res.flatMap((l) => arr(l.events).map((e) => `${e.actor}: ${e.text}`)).slice(-10);
+    const openings = res.slice(-5).map((l) => str(l.narrative).replace(/\s+/g, '').slice(0, 30));
+    return { events, openings };
+  }
+  function threadsText(g) {
+    const open = g.threads.filter((t) => t.status !== 'resolved');
+    return open.length ? open.map((t) => `- ${t.title}｜今の段階: ${t.stage}${t.stuck ? `（${t.stuck}手のあいだ進んでいない。今回かならず進めるか決着させる）` : ''}`).join('\n') : '（まだない。今回の展開から 1〜3 本立てる）';
+  }
+
   function turnPrompt(g, action) {
     const chron = g.chronicle.slice(g.synopsisUpTo).slice(-16).join('\n') || '（まだない）';
     const recent = g.log.filter((l) => l.t === 'res').slice(-2).map((l) => `［${l.turn}手目］${l.action}\n→ ${str(l.narrative).slice(0, 500)}`).join('\n\n') || str(g.intro).slice(0, 500);
+    const beats = recentBeats(g);
     const chats = Object.entries(g.chats || {}).map(([id, list]) => {
       const e = g.entities.find((x) => x.id === id);
       const last = arr(list).slice(-4).map((m) => `${m.role === 'me' ? 'プレイヤー' : e ? e.name : '相手'}「${str(m.text).slice(0, 60)}」`).join(' ');
@@ -857,6 +872,11 @@ ${worldText(g)}
 ${chron}
 【直前の展開】
 ${recent}
+【進行中の筋】（未解決の話の流れ。毎手どれかを一段進めるか決着させる）
+${threadsText(g)}
+【最近すでに使った出来事・書き出し】（これと同じ種類の出来事・同じ言い回しは使わない）
+${beats.events.length ? beats.events.map((x) => '- ' + x).join('\n') : '（まだない）'}
+${beats.openings.length ? '書き出し: ' + beats.openings.map((x) => '「' + x + '…」').join(' ') : ''}
 ${chats ? '【最近の個別の会話】（ここで決まったこと・知ったことは、今回の展開に反映する）\n' + chats + '\n' : ''}【展開の速さ】${pace}
 
 【プレイヤーの今回の行動】
@@ -865,11 +885,12 @@ ${action}
 決まり:
 - 結果は今の数値・所持金・持ち物・関係・力に基づいて公平に判定する。足りないもの（お金・力・時間・情報）がある行動は「失敗」か「一部成功」。何でも成功させない。良い策でも代償を伴うことが多い。
 - 【最重要1・人物の一貫性】登場人物は、それぞれの「人物設定」（性格・口調・価値観・絶対にしないこと）と好感度に必ず従う。口調（一人称・語尾）を変えない。好感が低い人物や敵対する人物を、急に協力的・親切・素直にしない。話を進めるためでも、人物に「その人らしくない」言動をさせない。${g.mode === 'work' ? '原作の人物は原作での性格・口調・力関係を守る（原作の台詞の引き写しはしない）。' : ''}
+- 【最重要3・繰り返さない】直前までの展開・各地の動き・書き出しと同じことを繰り返さない（同じ人物が同じ行動をする、同じ脅し・同じ報告・同じ情景描写、似た文の書き出しは禁止）。進行中の筋は「前と同じ段階」に留めず、毎回エスカレートさせるか、新しい事実を明かすか、決着させる。新しい人物・場所・手段・視点を積極的に入れる。
 - 【最重要2・展開】毎手かならず物語を前に進める。ただし進め方は、人物がその人らしく振る舞った結果として（協力しない人物なら、断る・対立する・裏で動く、という形で話が動く）。行動の結果を最後まで描き切り（相手の返事や反応だけで止めない）、その結果として新しい出来事・情報・状況の変化を最低1つ起こし、次の場面の入り口（引き）で終える。「〜はあなたの答えを待っている」「〜はあなたを見つめている」のような足踏みで終えない。
 - プレイヤーが台詞だけを書いた場合も、相手の返事 → その帰結 → 次の展開まで進める。プレイヤーが迷っている・様子を見る場合は、世界の側から出来事を起こす（来訪者・知らせ・事件・敵の動きなど）。
 - 「流れに任せて進める」行動なら、プレイヤーの人物らしい自然な行動を選んで進め、物語が大きく動く次の出来事まで描く。
 - 「時間を進める」行動なら、その間の出来事を要約して語り、日付を大きく進め、各勢力の動きを多めに入れる。
-- 数値の変化は stat_changes（1手で普通 ±1〜10、大事件でも ±25 まで）。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
+- 数値の変化は stat_changes（1手で普通 ±1〜10、大事件でも ±25 まで）。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes（持ち物は物語の鍵になる大事な物だけ。ありふれた物・消耗品・お金で買える雑貨は持ち物にしない。1手で増やすのは多くて1つ。持ち物は${ITEM_MAX}個まで（今${g.items.length}個）。使い切った・渡した・壊れた物は remove）。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
 - 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に。
 - 世界はプレイヤーの「傾向」を覚えて対応を変える（好戦的なら他が手を組んで警戒、約束破りなら信用されない、慈悲深ければ慕われる、謀略が多ければ密偵を警戒される）。今回強まった傾向を trait_changes に。
 - 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果はあなたが判定する。${workRule}
@@ -894,11 +915,12 @@ ${action}
   "perception": "世界がいまプレイヤーをどう見ているか（50字以内）",
   "new_date": "この手の後の物語内の時（例: 2006年9月・16日目）",
   "summary": "年代記に残す一行（40字以内）",
+  "threads": [{"title": "進行中の筋の名前（15字以内。既存の筋は同じ名前で）", "stage": "今どの段階か（30字以内）", "status": "open か resolved"}],
   "milestone": "物語の流れを変える決定的な出来事なら一行（40字以内）、そうでなければ空文字",
   "suggestions": ["次の行動の例を3つ。今の場面に直結し、話が大きく動く具体的なもの。性格の違うものに"],
   "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末（150字以内）"}
 }
-使わない欄は空の配列。trait_changes は各 -10〜10。`;
+threads は今回の後の「進行中の筋」全体（未解決は最大5本。決着したものは resolved で一度だけ返す）。使わない欄は空の配列。trait_changes は各 -10〜10。`;
   }
 
   function applyResult(g, r, action) {
@@ -920,11 +942,18 @@ ${action}
       chips.push({ label: str(m.label, '所持金').slice(0, 12), delta: a, money: true });
     });
     g.wallet.history = g.wallet.history.slice(0, 40);
-    arr(r.item_changes).slice(0, 4).forEach((c) => {
+    let added = 0;
+    const changes = arr(r.item_changes).slice(0, 4);
+    changes.filter((c) => c.op === 'remove').forEach((c) => {
+      const i = g.items.findIndex((x) => x.name === str(c.name).slice(0, 20));
+      if (i >= 0) { chips.push({ label: '失った: ' + g.items[i].name, delta: -1, text: true }); g.items.splice(i, 1); }
+    });
+    changes.filter((c) => c.op !== 'remove').forEach((c) => {
       const name = str(c.name).slice(0, 20);
-      if (!name) return;
-      if (c.op === 'remove') { const i = g.items.findIndex((x) => x.name === name); if (i >= 0) { g.items.splice(i, 1); chips.push({ label: '失った: ' + name, delta: -1, text: true }); } }
-      else if (!g.items.some((x) => x.name === name) && g.items.length < 24) { g.items.push(normItem(c)); chips.push({ label: '手に入れた: ' + name, delta: 1, text: true }); }
+      if (!name || added >= 1 || g.items.some((x) => x.name === name)) return;
+      if (g.items.length >= ITEM_MAX) { chips.push({ label: `持ち物がいっぱいで「${name}」を持てなかった`, delta: -1, text: true }); return; }
+      g.items.push(normItem(c)); added++;
+      chips.push({ label: '手に入れた: ' + name, delta: 1, text: true });
     });
     arr(r.quest_changes).slice(0, 4).forEach((c, i) => {
       const q = g.quests.find((x) => x.id === str(c.id) || x.title === str(c.title));
@@ -968,6 +997,19 @@ ${action}
     const outcome = ['success', 'partial', 'failure'].includes(r.outcome) ? r.outcome : 'partial';
     g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events });
     g.suggestions = arr(r.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80));
+    // 進行中の筋: 段階が変わらなければ「進んでいない」を数える
+    const incoming = arr(r.threads).map((t) => ({ title: str(t.title).slice(0, 20), stage: str(t.stage).slice(0, 40), status: t.status === 'resolved' ? 'resolved' : 'open' })).filter((t) => t.title);
+    if (incoming.length) {
+      const next = [];
+      incoming.forEach((t) => {
+        const old = g.threads.find((x) => x.title === t.title);
+        if (t.status === 'resolved') { if (old && old.status !== 'resolved') chips.push({ label: '決着: ' + t.title, delta: 1, text: true }); return; }
+        next.push({ ...t, since: old ? old.since : g.turn, stuck: old && old.stage === t.stage ? (old.stuck || 0) + 1 : 0 });
+      });
+      g.threads = next.slice(0, 5);
+    } else {
+      g.threads.forEach((t) => (t.stuck = (t.stuck || 0) + 1));
+    }
     let ending = r.ending && typeof r.ending === 'object' ? r.ending : null;
     const dead = g.stats.find((s) => s.fatal && s.value <= s.min);
     if (!ending && dead) ending = { type: 'defeat', title: dead.name + 'が尽きた', text: `${dead.name}が尽き、あなたの物語はここで幕を閉じた。` };
@@ -1297,6 +1339,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   function sheetTime(g) {
     const hist = S.histOpen ? `<div class="box chron">${g.chronicle.length ? [...g.chronicle].reverse().map((c) => { const [t, d, x] = c.split('｜'); return `<div><span>${esc(t)}手目<br>${esc(d || '')}</span>${esc(x || c)}</div>`; }).join('') : '<p class="muted">まだ何も記されていない。</p>'}</div>` : '';
     return `<div class="box big-date"><span class="circ">${ic('clock')}</span><span><span class="muted">タイムライン</span><b>${esc(g.date)}</b><span class="muted">${g.turn}手目</span></span></div>
+      <p class="sec">進行中の筋</p><div class="box chron">${g.threads.length ? g.threads.map((t) => `<div class="ms"><span>▸</span><span style="color:var(--fg);font-size:14px"><b>${esc(t.title)}</b><br><span class="muted">${esc(t.stage)}${t.stuck >= 2 ? '（足踏み中）' : ''}</span></span></div>`).join('') : '<p class="muted">物語が動き出すと、未解決の話の筋がここに並びます。</p>'}</div>
       <button class="pill-btn" id="hist">${ic('rewind')}${S.histOpen ? '履歴を閉じる' : '履歴を見る'}</button>${hist}
       <button class="act-btn" id="skip" ${g.status !== 'playing' ? 'disabled' : ''}><span class="ico">${ic('bolt')}</span><span><b>次の大きな出来事まで進む</b><small>AI が幅を決め、大事な節目で止まります</small></span><span class="chev">${ic('right')}</span></button>
       <div class="field-in"><span style="color:var(--muted);display:inline-flex">${ic('cal')}</span><input id="jump" placeholder="指定した時点へ進む…（例: 一週間後、秋の収穫祭）" maxlength="60"><button id="jumpgo" aria-label="進む">${ic('arrowR')}</button></div>
@@ -1364,10 +1407,11 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   }
   function sheetItems(g) {
     const sel = S.itemSel != null ? g.items[S.itemSel] : null;
-    const detail = sel ? `<div class="box idetail"><div class="row"><span class="em">${esc(sel.icon)}</span><div><b>${esc(sel.name)}</b><div class="muted">${esc(sel.desc)}</div></div></div><button class="pill-btn" id="useitem">この持ち物を使う（行動に書き込む）</button></div>` : '';
-    const empties = Math.max(0, 8 - g.items.length);
-    return `${detail}<div class="igrid">${g.items.map((it, i) => `<button class="item" data-item="${i}"><span class="em">${esc(it.icon)}</span><b>${esc(it.name)}</b></button>`).join('')}${'<div class="item empty"></div>'.repeat(Math.min(empties, 4))}</div>
-      ${g.items.length ? '' : '<p class="muted">何も持っていない。</p>'}`;
+    const detail = sel ? `<div class="box idetail"><div class="row"><span class="em">${esc(sel.icon)}</span><div><b>${esc(sel.name)}</b><div class="muted">${esc(sel.desc)}</div></div></div><div class="row"><button class="pill-btn" id="useitem" style="flex:1">使う（行動に書き込む）</button><button class="btn danger" id="dropitem">${S.dropArmed ? '本当に捨てる' : '捨てる'}</button></div></div>` : '';
+    const empties = Math.max(0, ITEM_MAX - g.items.length);
+    const full = g.items.length >= ITEM_MAX;
+    return `<p class="muted" style="margin:0">持ち物 <b style="color:var(--fg)">${g.items.length} / ${ITEM_MAX}</b>　物語の鍵になる大事な物だけを持てます。${full ? '<span style="color:var(--bad)">いっぱいです。新しい物を手に入れるには、どれかを捨ててください。</span>' : ''}</p>
+      ${detail}<div class="igrid">${g.items.map((it, i) => `<button class="item" data-item="${i}"><span class="em">${esc(it.icon)}</span><b>${esc(it.name)}</b></button>`).join('')}${'<div class="item empty"></div>'.repeat(empties)}</div>`;
   }
   function sheetQuest(g) {
     const notes = g.quests.map((q) => `<div class="note"><h4>${esc(q.title)}</h4><p>${esc(q.desc)}</p><div class="by">by ${esc(q.client)}${q.reward ? ` ・ <b>${esc(q.reward)}</b>` : ''}</div>
@@ -1438,7 +1482,13 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       const sb = $('sbody'); sb.scrollTop = sb.scrollHeight;
       if (!S.chatBusy) inp.focus({ preventScroll: true });
     }
-    app.querySelectorAll('[data-item]').forEach((b) => b.onclick = () => { S.itemSel = +b.dataset.item; renderSheet(); });
+    app.querySelectorAll('[data-item]').forEach((b) => b.onclick = () => { S.itemSel = +b.dataset.item; S.dropArmed = false; renderSheet(); });
+    if ($('dropitem')) $('dropitem').onclick = () => {
+      if (!S.dropArmed) { S.dropArmed = true; return renderSheet(); }
+      const it = g.items[S.itemSel];
+      if (it) { g.items.splice(S.itemSel, 1); g.chronicle.push(`${g.turn}｜${g.date}｜「${it.name}」を手放した`); }
+      S.itemSel = null; S.dropArmed = false; S.variants = null; save(); renderSheet();
+    };
     if ($('useitem')) $('useitem').onclick = () => { const it = g.items[S.itemSel]; openSheet(null); const ta = $('cmd'); if (ta && it) { ta.value = `「${it.name}」を使って、`; ta.focus(); } };
     app.querySelectorAll('[data-accept]').forEach((b) => b.onclick = () => { const q = g.quests.find((x) => x.id === b.dataset.accept); if (q) sendAction(`依頼「${q.title}」（依頼主: ${q.client}）を引き受ける。`); });
     if ($('qref')) $('qref').onclick = () => { S.toast = ''; refreshQuests(); };

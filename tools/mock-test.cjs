@@ -48,7 +48,7 @@ window.claude = { use: async (n) => {
       outcome: 'partial', outcome_reason: '礼は尽くしたが足元を見られた',
       stat_changes: [{ key: 'stability', delta: 4, reason: '当面の安心' }, { key: 'support', delta: -3, reason: '弱腰と見られた' }],
       money_changes: [{ amount: -300, label: '帝国への贈り物' }],
-      item_changes: [{ op: 'add', name: '皇帝の親書', icon: '📜', desc: '忠誠を求める文面が並ぶ。' }],
+      item_changes: [{ op: 'add', name: '皇帝の親書', icon: '📜', desc: '忠誠を求める文面が並ぶ。' }, { op: 'add', name: '銀の杯', icon: '🏆', desc: '使者の手土産。' }, { op: 'add', name: '干し肉', icon: '🍖', desc: '保存食。' }],
       quest_changes: [{ id: 'q2', status: 'done' }],
       profile_changes: [{ label: '才覚', value: '慎重' }],
       entity_changes: [{ id: 'e1', relation_delta: 8, attitude: '見下し', mood: '満足', note: '贈り物を受け取った', memory: '公主から金貨を受け取った' }, { id: 'e6', relation_delta: -10, mood: '不満' }],
@@ -56,7 +56,7 @@ window.claude = { use: async (n) => {
       world_events: [{ actor: '王子レオン', text: '国境の兵を倍に増やした。' }],
       news: [{ source: '酒場の噂', headline: '新しい公主は帝国に尻尾を振ったらしい' }],
       trait_changes: { aggression: -3, diplomacy: 5 }, perception: '帝国に従順な若君と見られ始めている。',
-      new_date: '大陸暦812年 春・4日目', summary: '帝国に贈り物を送り衝突を避けた', milestone: '帝国に贈り物を送った',
+      new_date: '大陸暦812年 春・4日目', summary: '帝国に贈り物を送り衝突を避けた', milestone: '帝国に贈り物を送った', threads: [{ title: '帝国との緊張', stage: '贈り物で一時休戦', status: 'open' }, { title: 'カイラの不満', stage: '将軍が苛立っている', status: 'open' }],
       suggestions: ['将軍カイラをなだめる', 'レオンに使者を送る', '商人同盟と取引を見直す'], ending: null };
     const raw = JSON.stringify(res);
     if (opts && opts.onText) { opts.onText({ text: raw.slice(0, 120), delta: raw.slice(0, 120) }); await new Promise(r => setTimeout(r, 250)); }
