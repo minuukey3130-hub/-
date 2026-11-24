@@ -41,6 +41,7 @@ window.claude = { use: async (n) => {
     await new Promise(r => setTimeout(r, 250));
     if (input.includes('"reply"')) return { reply: '……用件は手短に。帝国の使者が来る前に、腹を決めておくことだ。', relation_delta: 2, mood: '思案', memo: '' };
     if (input.includes('"personas"')) return { personas: [...input.matchAll(/id:([a-z0-9_]+)｜/g)].map((m) => ({ id: m[1], persona: { personality: '寡黙', speech: '一人称は「拙者」', values: '忠義', never: '嘘' } })) };
+    if (input.includes('"explain"')) return { explain: 'いまあなたは玉座の間にいます。帝国の使者が贈り物を受け取って帰りました。次は将軍カイラをなだめるか、王子レオンと話すことができます。' };
     if (input.includes('"synopsis"')) return { synopsis: 'ヴェルナ公国の若き公主は帝国に贈り物を送り、衝突を避け続けた。将軍カイラは不満を募らせている。' };
     if (input.includes('"quests"')) return { quests: [{ title: '密輸商人の摘発', desc: '西の港で武器の密輸が行われている。', client: '港の役人', reward: '金貨200' }] };
     const res = {
@@ -56,6 +57,7 @@ window.claude = { use: async (n) => {
       world_events: [{ actor: '王子レオン', text: '国境の兵を倍に増やした。' }],
       news: [{ source: '酒場の噂', headline: '新しい公主は帝国に尻尾を振ったらしい' }],
       trait_changes: { aggression: -3, diplomacy: 5 }, perception: '帝国に従順な若君と見られ始めている。',
+      situation: '帝国の使者は去ったが、将軍カイラの不満が高まっている。次は国内を固めたい。', terms: [{ term: '皇帝の親書', meaning: '帝国への忠誠を求める手紙' }],
       new_date: '大陸暦812年 春・4日目', summary: '帝国に贈り物を送り衝突を避けた', milestone: '帝国に贈り物を送った', threads: [{ title: '帝国との緊張', stage: '贈り物で一時休戦', status: 'open' }, { title: 'カイラの不満', stage: '将軍が苛立っている', status: 'open' }],
       suggestions: ['将軍カイラをなだめる', 'レオンに使者を送る', '商人同盟と取引を見直す'], ending: null };
     const raw = JSON.stringify(res);

@@ -61,7 +61,9 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { height: 100%; width: 100%; max-width: 100%; overflow-x: hidden; }
+body { margin: 0; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.75; overflow: hidden; }
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
@@ -85,6 +87,20 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .mem { display: grid; gap: 2px; font-size: 13px; background: var(--surface-2); border-radius: 12px; padding: 8px 12px; }
 .mem b { font-size: 12px; color: var(--muted); }
 .synopsis { white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
+.feed { grid-template-columns: minmax(0, 1fr); }
+.story { grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.story > *, .narr, .datechip, .verdict, .situation, .terms, .explain, .events, .mine, .chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.tabbar button { min-width: 0; }
+.tabbar button span { white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
+.situation { background: var(--accent-soft); border-radius: 14px; padding: 8px 14px; font-size: 14px; display: grid; gap: 2px; }
+.situation b { font-size: 12px; color: var(--accent); letter-spacing: 0.06em; }
+.terms { border: 1px dashed var(--line); border-radius: 14px; padding: 8px 14px; font-size: 13.5px; display: grid; gap: 2px; }
+.terms h4 { margin: 0; font-size: 12px; color: var(--muted); }
+.terms b { margin-right: 8px; }
+.explain { background: var(--warn-soft); border-radius: 18px; padding: 12px 16px; display: grid; gap: 4px; font-size: 14.5px; white-space: pre-wrap; }
+.explain b { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--warn); }
+.explain b svg { width: 18px; height: 18px; }
+.tools .explain-btn { font-size: 12.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
 .mem .pk { display: inline-block; min-width: 6.5em; color: var(--muted); font-size: 12px; font-weight: 700; }
 .pedit label { display: grid; gap: 2px; font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 4px; }
 .pedit textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; background: var(--surface); font-size: 14px; font-weight: 400; color: var(--fg); resize: vertical; }
@@ -108,7 +124,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .events { background: var(--surface-2); border-radius: 14px; padding: 10px 14px; display: grid; gap: 4px; font-size: 14px; }
 .events h4 { margin: 0 0 2px; font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: 0.08em; }
 .mine { justify-self: end; max-width: 85%; background: var(--accent); color: #fff; padding: 8px 14px; border-radius: 18px 18px 4px 18px; white-space: pre-wrap; font-size: 15px; }
-.tools { display: flex; align-items: center; gap: 4px; color: var(--muted); padding: 0 6px; margin-top: -4px; }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--muted); padding: 0 6px; margin-top: -4px; }
 .tools button { padding: 6px; border-radius: 10px; color: var(--muted); display: inline-flex; }
 .tools button:hover { background: var(--surface); color: var(--fg); }
 .tools button:disabled { opacity: 0.35; cursor: default; }
@@ -343,11 +359,11 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   const TIERS = { quick: '速い', default: '標準', complex: 'じっくり' };
   const TEMPOS = { brisk: 'テンポよく', normal: 'ふつう', slow: 'じっくり' };
   const TEMPO_RULE = {
-    brisk: '1手で場面を1〜2つ先まで進める。移動・準備・待ち時間などの途中経過は一文でまとめ、時間も必要なだけ進める（数時間〜数日）。会話は要点だけにして、すぐ次の出来事へ。',
+    brisk: '1手で場面を1つ先まで進める。移動・準備・待ち時間などの途中経過は一文でまとめ、時間も必要なだけ進める（数時間〜数日）。会話は要点だけにして、すぐ次の出来事へ。ただし新しい要素を詰め込まない。',
     normal: '1手で場面を1つ進める。行動の結果を描き切り、次の出来事の入り口まで進める。',
     slow: '1つの場面を丁寧に描く。会話や心情の描写を多めにしてよいが、それでも毎手かならず何か一つは状況を変える。',
   };
-  const tempoOf = (g) => (g.settings && TEMPOS[g.settings.tempo] ? g.settings.tempo : 'brisk');
+  const tempoOf = (g) => (g.settings && TEMPOS[g.settings.tempo] ? g.settings.tempo : 'normal');
   const PROGRESS = '（流れに任せて、物語を次の出来事まで進める）';
 
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -537,13 +553,15 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 
   // 古い形式の記録を今の形に
   function upgrade(g) {
-    g.settings = g.settings || { tier: 'default', tempo: 'brisk' };
-    if (!g.settings.tempo) g.settings.tempo = 'brisk';
+    g.settings = g.settings || { tier: 'default', tempo: 'normal' };
+    if (!g.settings.tempo) g.settings.tempo = 'normal';
     g.chats = g.chats || {};
     g.profile = arr(g.profile); g.items = arr(g.items); g.quests = arr(g.quests); g.news = arr(g.news); g.log = arr(g.log); g.chronicle = arr(g.chronicle);
     g.wallet = g.wallet || { unit: '円', symbol: '', balance: 0, history: [] };
     g.milestones = arr(g.milestones);
     g.threads = arr(g.threads);
+    g.glossary = arr(g.glossary);
+    g.canon = str(g.canon);
     g.synopsis = str(g.synopsis);
     g.synopsisUpTo = num(g.synopsisUpTo, 0);
     g.entities = arr(g.entities).map((e) => ({ ...e, memory: arr(e.memory), persona: e.persona ? normPersona(e.persona) : undefined }));
@@ -628,7 +646,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         { id: 'e6', name: '将軍カイラ', kind: '人物', relation: 30, power: 50, attitude: '血気', bond: '家臣', mood: '苛立ち', desc: '国軍の若き将。主戦派で、弱腰な主には従わない。', persona: { personality: '血気盛んで率直。武勇を尊び、臆病を嫌う。', speech: '一人称は「私」。主を「公主」と呼ぶ。言葉は短く荒く、遠慮なく意見する。', values: '国を守る強い軍。兵の命と誇り。', never: '戦わずに降伏する。兵を見捨てる。' } },
       ],
       traits: blankTraits(), perception: '新しい公主がどんな人物か、大陸はまだ知らない。',
-      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'brisk' },
+      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'normal' },
       suggestions: ['宰相と将軍を呼び、国の現状を報告させる', '帝国の使者を迎える準備を整える', '王子レオンに秘密の会談を持ちかける'],
       status: 'playing',
       intro: '先代公主の急死から十日。あなたは冠を受け継ぎ、ヴェルナ公国の玉座に座った。\n\n北からはガルザ帝国の使者が「祝意」を携えてやって来るという。東のオルト王国では王子レオンが国境に兵を集め、西の商人たちは金貨を数えながら成り行きを見ている。\n\n宰相ベルナルドは静かに、将軍カイラは苛立たしげに、あなたの最初の言葉を待っている。',
@@ -760,7 +778,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   "items": [{"name": "持ち物", "icon": "絵文字1つ", "desc": "説明（40字以内）"}],
   "quests": [{"title": "依頼・仕事の名前", "desc": "内容（50字以内）", "client": "依頼主", "reward": "報酬（金額か言葉）"}],
   "entities": [{"name": "人物や勢力", "kind": "人物 / 組織 / 国 など", "relation": -100〜100（プレイヤーへの好感）, "power": 0〜100（影響力）, "attitude": "態度（6字以内）", "bond": "プレイヤーとの関係（8字以内）", "mood": "今の気分（8字以内）", "desc": "どんな存在か（60字以内）", ${PERSONA_SCHEMA}}],
-  "suggestions": ["最初の行動の例", "…", "…"]
+  "suggestions": ["最初の行動の例", "…", "…"]${mode === 'work' ? ',\n  "canon": "原作でのこの時期の状況・人物たちの立場・この後に原作で起きる大きな出来事の流れ（250字以内）"' : ''}
 }
 決まり:
 - stats は 4〜6 個（体力・気力・名声・人脈・戦闘力など、この世界での生き残りと成功に関わる数値）。0 で物語が終わるもの（体力など）は fatal を true。お金は stats ではなく wallet に入れる。
@@ -804,9 +822,9 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         persona: normPersona(e.persona), memory: [],
       })),
       traits: blankTraits(), perception: 'あなたがどんな人物か、まだ誰も知らない。',
-      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'brisk' },
+      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'normal' },
       suggestions: arr(w.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80)),
-      status: 'playing', intro: str(w.intro, 'あなたの物語が始まる。'),
+      status: 'playing', intro: str(w.intro, 'あなたの物語が始まる。'), canon: str(w.canon).slice(0, 500), glossary: [],
     };
   }
 
@@ -836,7 +854,9 @@ ${ents}
 【これまでのあらすじ】
 ${g.synopsis || '（まだ始まったばかり）'}
 【決定的な出来事】
-${g.milestones.length ? g.milestones.map((m) => '- ' + m).join('\n') : 'まだない'}`;
+${g.milestones.length ? g.milestones.map((m) => '- ' + m).join('\n') : 'まだない'}${g.canon ? '\n【原作でのこの時期の状況（展開の土台）】\n' + g.canon : ''}
+【用語と手がかり】（すでに出た言葉。意味を変えない）
+${g.glossary.length ? g.glossary.slice(-30).map((t) => `- ${t.term}: ${t.meaning}`).join('\n') : 'まだない'}`;
   }
 
   // ================= 1 手 =================
@@ -863,7 +883,7 @@ ${g.milestones.length ? g.milestones.map((m) => '- ' + m).join('\n') : 'まだ�
       return e && last ? `- ${e.name}との会話: ${last}` : '';
     }).filter(Boolean).slice(-4).join('\n');
     const pace = TEMPO_RULE[tempoOf(g)];
-    const workRule = g.mode === 'work' ? `\n- この世界は既存の作品「${str(g.source && g.source.work)}」が元。原作の設定や人物の性格を尊重しつつ、プレイヤーが加わったことで展開は原作から分かれてよい。原作の台詞や文章を長く引き写さない。` : '';
+    const workRule = g.mode === 'work' ? `\n- この世界は既存の作品「${str(g.source && g.source.work)}」が元。原作の世界観・組織・役職・制度・能力の仕組みの枠を守る。原作に存在しない組織・役職・制度・派閥・術の体系を作らない（例: 原作にない「副長」「書役」などを出さない）。展開は【原作でのこの時期の状況】と原作の人物・場所・出来事を土台にし、プレイヤーが加わったことで少しずつ分かれていく形にする。原作の台詞や文章を長く引き写さない。` : '';
     return `あなたは対話型シミュレーションゲーム「万象録」のゲームマスター。プレイヤーの行動の結果と、世界の反応を決める。
 
 ${worldText(g)}
@@ -884,8 +904,13 @@ ${action}
 
 決まり:
 - 結果は今の数値・所持金・持ち物・関係・力に基づいて公平に判定する。足りないもの（お金・力・時間・情報）がある行動は「失敗」か「一部成功」。何でも成功させない。良い策でも代償を伴うことが多い。
+- 【最重要0・わかりやすさ】プレイヤーが本文だけ読んで筋を追えるように書く。
+  ・1手で新しく出す名前・用語（人物・組織・物・術・手がかり）は多くて2つ。出すときは、それが何かを本文の中で一言で説明する。
+  ・前に出た人物・物・手がかりに触れるときは、何だったかを短く思い出させる（例:「昨日拾った、朱で書かれた札」）。
+  ・謎や陰謀は、プレイヤーがすでに知っている情報だけで筋が追えるように。手がかりは1手に1つずつ明かす。AI だけが知る前提で話を進めない。
+  ・誰が話しているかが分かるように、台詞の前後に話し手を書く。長い説明台詞を続けない。
 - 【最重要1・人物の一貫性】登場人物は、それぞれの「人物設定」（性格・口調・価値観・絶対にしないこと）と好感度に必ず従う。口調（一人称・語尾）を変えない。好感が低い人物や敵対する人物を、急に協力的・親切・素直にしない。話を進めるためでも、人物に「その人らしくない」言動をさせない。${g.mode === 'work' ? '原作の人物は原作での性格・口調・力関係を守る（原作の台詞の引き写しはしない）。' : ''}
-- 【最重要3・繰り返さない】直前までの展開・各地の動き・書き出しと同じことを繰り返さない（同じ人物が同じ行動をする、同じ脅し・同じ報告・同じ情景描写、似た文の書き出しは禁止）。進行中の筋は「前と同じ段階」に留めず、毎回エスカレートさせるか、新しい事実を明かすか、決着させる。新しい人物・場所・手段・視点を積極的に入れる。
+- 【最重要3・繰り返さない】直前までの展開・各地の動き・書き出しと同じことを繰り返さない（同じ人物が同じ行動をする、同じ脅し・同じ報告・同じ情景描写、似た文の書き出しは禁止）。進行中の筋は「前と同じ段階」に留めず、一段進めるか決着させる。新しさは、すでに登場している人物・場所・物の新しい組み合わせや、隠れていた一面で出す（新しい要素を増やして変化を出さない）。
 - 【最重要2・展開】毎手かならず物語を前に進める。ただし進め方は、人物がその人らしく振る舞った結果として（協力しない人物なら、断る・対立する・裏で動く、という形で話が動く）。行動の結果を最後まで描き切り（相手の返事や反応だけで止めない）、その結果として新しい出来事・情報・状況の変化を最低1つ起こし、次の場面の入り口（引き）で終える。「〜はあなたの答えを待っている」「〜はあなたを見つめている」のような足踏みで終えない。
 - プレイヤーが台詞だけを書いた場合も、相手の返事 → その帰結 → 次の展開まで進める。プレイヤーが迷っている・様子を見る場合は、世界の側から出来事を起こす（来訪者・知らせ・事件・敵の動きなど）。
 - 「流れに任せて進める」行動なら、プレイヤーの人物らしい自然な行動を選んで進め、物語が大きく動く次の出来事まで描く。
@@ -899,7 +924,9 @@ ${action}
 
 次の形の JSON だけを返す（narrative を最初に）:
 {
-  "narrative": "結果と、その後に起きた新しい展開を、情景と人物の反応が伝わるように二人称で（250〜500字）。強調したい語は「」で囲む",
+  "narrative": "結果と、その後に起きた展開を、情景と人物の反応が伝わるように二人称で（200〜400字）。台詞は「」で、話し手が分かるように",
+  "situation": "いま何が起きていて、プレイヤーは何をすればよいかを、初めて読む人にも分かる一文で（60字以内）",
+  "terms": [{"term": "今回はじめて出た名前・用語・手がかり（2つまで）", "meaning": "それが何か（30字以内）"}],
   "outcome": "success" か "partial" か "failure",
   "outcome_reason": "判定の理由（30字以内）",
   "stat_changes": [{"key": "数値の key", "delta": 整数, "reason": "短い理由"}],
@@ -995,7 +1022,10 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
     g.chronicle.push(`${g.turn}｜${g.date}｜${str(r.summary, action).slice(0, 60)}`);
     if (str(r.milestone).trim()) g.milestones.push(`${g.turn}手目（${g.date}）: ${str(r.milestone).trim().slice(0, 50)}`);
     const outcome = ['success', 'partial', 'failure'].includes(r.outcome) ? r.outcome : 'partial';
-    g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events });
+    const terms = arr(r.terms).slice(0, 3).map((t) => ({ term: str(t.term).trim().slice(0, 20), meaning: str(t.meaning).trim().slice(0, 50), turn: g.turn })).filter((t) => t.term && t.meaning);
+    terms.forEach((t) => { const ex = g.glossary.find((x) => x.term === t.term); if (ex) ex.meaning = t.meaning; else g.glossary.push(t); });
+    g.glossary = g.glossary.slice(-60);
+    g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events, situation: str(r.situation).slice(0, 90), terms });
     g.suggestions = arr(r.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80));
     // 進行中の筋: 段階が変わらなければ「進んでいない」を数える
     const incoming = arr(r.threads).map((t) => ({ title: str(t.title).slice(0, 20), stage: str(t.stage).slice(0, 40), status: t.status === 'resolved' ? 'resolved' : 'open' })).filter((t) => t.title);
@@ -1064,7 +1094,52 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
     }
     S.busy = false;
     renderGame();
-    maybeCompress().then(() => maybeFillPersonas());
+    maybeCompress().then(() => maybeFillPersonas()).then(() => maybeFillCanon());
+  }
+
+  // 「？ 状況を説明して」: 物語は進めず、今の状況を平易に説明する
+  async function explainSituation() {
+    if (S.busy || !S.G) return;
+    const g = S.G;
+    S.busy = true; S.toast = ''; renderGame();
+    const smp = await getSample();
+    if (!smp) { S.busy = false; S.toast = NO_AI; return renderGame(); }
+    const recent = g.log.filter((l) => l.t === 'res' || l.t === 'intro').slice(-3).map((l) => (l.action ? `［${l.turn}手目］あなたの行動: ${l.action}\n` : '') + str(l.narrative || l.text).slice(0, 600)).join('\n\n');
+    try {
+      S.ctl = new AbortController();
+      const r = await smp.json(`あなたは対話型シミュレーションゲームの案内役。プレイヤーが今の状況が分からなくなっている。物語は進めずに、今の状況を分かりやすく説明する。
+
+${worldText(g, { short: true })}
+【直近の展開】
+${recent}
+
+決まり: 中学生にも分かる平易な言葉で、250字以内。次の順に: いま誰と一緒に・どこにいるか／何が問題になっているか（登場した用語や手がかりの意味も一言で）／誰が味方で誰が怪しいか／プレイヤーが次にできることを2〜3個。新しい事実や設定を足さない。
+JSON だけを返す: {"explain": "説明"}`, { signal: S.ctl.signal, cache: false, modelTier: 'quick' });
+      const text = str(r && r.explain).trim();
+      if (text) {
+        const entry = { t: 'explain', text: text.slice(0, 600) };
+        g.log.push(entry);
+        if (S.variants && S.variants.list[S.variants.idx]) S.variants.list[S.variants.idx].log.push(clone(entry));
+        save();
+      }
+    } catch (e) { if (!(e && e.code === 'cancelled')) S.toast = aiMsg(e); }
+    S.busy = false; renderGame();
+  }
+
+  // 作品世界で「原作でのこの時期の状況」がない古い記録に、1 回だけ作る
+  async function maybeFillCanon() {
+    const g = S.G;
+    if (!g || g.mode !== 'work' || g.canon || S.fillingCanon) return;
+    S.fillingCanon = true;
+    try {
+      const smp = await getSample();
+      const r = smp && (await smp.json(`既存の作品「${str(g.source && g.source.work)}」について。次の世界の今の時期（${g.date}）に当たる、原作での状況・人物たちの立場・この後に原作で起きる大きな出来事の流れを 250 字以内でまとめる。分からない部分は書かない。
+【世界】${g.title}／${g.premise}
+JSON だけを返す: {"canon": "まとめ"}`, { cache: false, modelTier: 'default' }));
+      const c = str(r && r.canon).trim();
+      if (c && S.G === g) { g.canon = c.slice(0, 500); save(); }
+    } catch { /* 次の手で */ }
+    S.fillingCanon = false;
   }
 
   // 年代記がたまったら、古い分を「これまでのあらすじ」に畳み込む（プレイヤーの 1 手に続けて 1 回だけ）
@@ -1240,6 +1315,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       if (i < start) return '';
       if (l.t === 'intro') return storyCard(l.text, l.date || '');
       if (l.t === 'act') return `<div class="mine">${esc(l.text)}</div>`;
+      if (l.t === 'explain') return `<div class="explain"><b>${ic('bulb')}いまの状況の説明</b><div>${esc(l.text)}</div></div>`;
       if (l.t === 'end') return `<div class="end"><span class="muted">終幕</span><h3>${esc(l.title)}</h3><div>${esc(l.text)}</div></div>`;
       if (l.t !== 'res') return '';
       const label = { success: '成功', partial: '一部成功', failure: '失敗' }[l.outcome];
@@ -1255,11 +1331,15 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
           <button id="vprev" aria-label="前の結果" ${!v || k <= 1 ? 'disabled' : ''}>${ic('left')}</button><span class="pg">${k} / ${n}</span><button id="vnext" aria-label="次の結果" ${!v || k >= n ? 'disabled' : ''}>${ic('right')}</button>
           <button id="regen" aria-label="結果を作り直す" title="同じ行動で結果を作り直す" ${v ? '' : 'disabled'}>${ic('redo')}</button>
           <button id="edit" aria-label="行動を書き直す" title="この行動を書き直す" ${v ? '' : 'disabled'}>${ic('pen')}</button>
+          <button id="explain" class="explain-btn" title="今の状況を分かりやすく説明してもらう">？ 状況を説明して</button>
           <span class="sp"></span><span class="muted">${l.turn}手目</span></div>`;
       }
       return `<div class="story"><span class="datechip">${ic('clock')}${esc(l.date || g.date)}</span>
         <div class="verdict"><span class="badge ${l.outcome}">${label}</span>${esc(l.reason)}</div>
-        <div class="narr">${body}</div>${chips ? `<div class="chips">${chips}</div>` : ''}${ev}</div>${tools}`;
+        <div class="narr">${body}</div>
+        ${arr(l.terms).length ? `<div class="terms"><h4>新しく出た言葉</h4>${l.terms.map((t) => `<div><b>${esc(t.term)}</b>${esc(t.meaning)}</div>`).join('')}</div>` : ''}
+        ${l.situation ? `<div class="situation"><b>いまの状況</b>${esc(l.situation)}</div>` : ''}
+        ${chips ? `<div class="chips">${chips}</div>` : ''}${ev}</div>${tools}`;
     }).join('');
   }
 
@@ -1310,6 +1390,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('vprev')) $('vprev').onclick = () => { v.idx--; S.G = clone(v.list[v.idx]); save(); renderGame(); };
     if ($('vnext')) $('vnext').onclick = () => { v.idx++; S.G = clone(v.list[v.idx]); save(); renderGame(); };
     if ($('regen')) $('regen').onclick = () => sendAction(v.action, { regen: true });
+    if ($('explain')) $('explain').onclick = () => explainSituation();
     if ($('edit')) $('edit').onclick = () => { S.G = clone(v.base); S.draft = v.action; S.variants = null; save(); renderGame(); };
     const feed = $('feed');
     if ($('more')) $('more').onclick = () => {
@@ -1344,7 +1425,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       <button class="act-btn" id="skip" ${g.status !== 'playing' ? 'disabled' : ''}><span class="ico">${ic('bolt')}</span><span><b>次の大きな出来事まで進む</b><small>AI が幅を決め、大事な節目で止まります</small></span><span class="chev">${ic('right')}</span></button>
       <div class="field-in"><span style="color:var(--muted);display:inline-flex">${ic('cal')}</span><input id="jump" placeholder="指定した時点へ進む…（例: 一週間後、秋の収穫祭）" maxlength="60"><button id="jumpgo" aria-label="進む">${ic('arrowR')}</button></div>
       <label class="selrow">${ic('gauge')}<b>展開の速さ</b><select id="pace">${Object.entries(TEMPOS).map(([k, v]) => `<option value="${k}" ${tempoOf(g) === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-      <p class="muted" style="margin:-4px 4px 0">テンポよく: 1手で場面が1〜2つ進む／ふつう: 1つ進む／じっくり: 会話や描写を丁寧に。</p>`;
+      <p class="muted" style="margin:-4px 4px 0">テンポよく: 途中を飛ばしてどんどん進む／ふつう: 1手で場面が1つ進む／じっくり: 会話や描写を丁寧に。</p>`;
   }
   function sheetStat(g) {
     const nums = g.stats.map((s) => `<div class="sitem"><div class="top"><span>${esc(s.name)}</span><b class="${statBarCls(s) === 'red' ? 'low' : ''}">${s.value}</b></div><div class="bar ${statBarCls(s)}"><i style="width:${(((s.value - s.min) / (s.max - s.min)) * 100).toFixed(1)}%"></i></div><div class="desc">${esc(s.desc)}${s.fatal ? '（0で終幕）' : ''}</div></div>`).join('');
@@ -1421,7 +1502,8 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   function sheetLog(g) {
     const news = g.news.length ? g.news.map((n) => `<div class="news-item"><b>${esc(n.source)}・${n.turn}手目</b>${esc(n.headline)}</div>`).join('') : '<p class="muted">まだ噂は立っていない。</p>';
     const chron = g.chronicle.length ? [...g.chronicle].reverse().map((c) => { const [t, d, x] = c.split('｜'); return `<div><span>${esc(t)}手目</span>${esc(x || c)}</div>`; }).join('') : '<p class="muted">まだ何も記されていない。</p>';
-    const syn = `<p class="sec">これまでのあらすじ</p><div class="box synopsis">${g.synopsis ? esc(g.synopsis) : '<span class="muted">年代記がたまると、古い出来事がここにあらすじとしてまとめられ、AI が長く覚えていられるようになります。</span>'}</div>`;
+    const gl = `<p class="sec">用語と手がかり</p><div class="box chron">${g.glossary.length ? g.glossary.slice().reverse().map((t) => `<div><span>${t.turn ? t.turn + '手目' : ''}</span><span style="color:var(--fg);font-size:14px"><b>${esc(t.term)}</b>　${esc(t.meaning)}</span></div>`).join('') : '<p class="muted">物語に新しい言葉や手がかりが出ると、ここに意味と一緒にたまります。</p>'}</div>`;
+    const syn = gl + `<p class="sec">これまでのあらすじ</p><div class="box synopsis">${g.synopsis ? esc(g.synopsis) : '<span class="muted">年代記がたまると、古い出来事がここにあらすじとしてまとめられ、AI が長く覚えていられるようになります。</span>'}</div>`;
     const ms = `<p class="sec">決定的な出来事</p><div class="box chron">${g.milestones.length ? g.milestones.slice().reverse().map((m) => `<div class="ms"><span>★</span>${esc(m)}</div>`).join('') : '<p class="muted">まだない。</p>'}</div>`;
     return syn + ms + `<p class="sec">噂と知らせ</p><div class="box" style="display:grid;gap:10px">${news}</div><p class="sec">年代記</p><div class="box chron">${chron}</div>`;
   }
