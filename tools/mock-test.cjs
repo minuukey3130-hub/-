@@ -41,7 +41,7 @@ window.claude = { use: async (n) => {
     await new Promise(r => setTimeout(r, 250));
     if (input.includes('"reply"')) return { reply: '……用件は手短に。帝国の使者が来る前に、腹を決めておくことだ。', relation_delta: 2, mood: '思案', memo: '' };
     if (input.includes('"personas"')) return { personas: [...input.matchAll(/id:([a-z0-9_]+)｜/g)].map((m) => ({ id: m[1], persona: { personality: '寡黙', speech: '一人称は「拙者」', values: '忠義', never: '嘘' } })) };
-    if (input.includes('"lore"')) return { lore: '■世界のルール\nテスト用の原作資料。' };
+    if (input.includes('"lore"')) return { lore: '■世界のルール テスト用の原作資料。' };
     if (input.includes('強さの判定に使える形にまとめる')) return { player: { name: '公主', abilities: '外交と剣術', power: '一国の君主として中堅', limits: '戦場経験がない' } };
     if (input.includes('"explain"')) return { explain: 'いまあなたは玉座の間にいます。帝国の使者が贈り物を受け取って帰りました。次は将軍カイラをなだめるか、王子レオンと話すことができます。' };
     if (input.includes('"synopsis"')) return { synopsis: 'ヴェルナ公国の若き公主は帝国に贈り物を送り、衝突を避け続けた。将軍カイラは不満を募らせている。' };

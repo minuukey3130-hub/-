@@ -315,7 +315,11 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .scroll { height: 100%; overflow-y: auto; }
 .title { padding-block: 36px 40px; display: grid; gap: 24px; }
 .title h1 { font-size: clamp(38px, 9vw, 56px); font-weight: 900; margin: 0; letter-spacing: 0.04em; }
-.title .tag { margin: -14px 0 0; color: var(--muted); }
+.title .tag { margin: -14px 0 0; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.ver { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick button { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; border-radius: 999px; padding: 8px 14px; }
+.quick button svg { width: 18px; height: 18px; }
 .note-ai { background: var(--warn-soft); color: var(--fg); border-radius: 16px; padding: 10px 14px; font-size: 14px; }
 .lbl { font-size: 13px; font-weight: 900; color: var(--muted); margin: 0 0 8px; letter-spacing: 0.06em; }
 .modes { display: grid; gap: 12px; }
@@ -358,6 +362,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
+  const APP_VERSION = '第13版（11月25日）';
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
   const TRAITS = [['aggression', '好戦'], ['diplomacy', '協調'], ['cunning', '謀略'], ['mercy', '慈悲'], ['ambition', '野心'], ['honor', '信義']];
@@ -705,7 +710,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     S.G = null; S.sheet = null; S.variants = null;
     const modeBtn = (m, t, d) => `<button class="mode" data-mode="${m}"><span class="ico" style="background:${MODE_STYLE[m][1]};color:${MODE_STYLE[m][2]}">${ic(MODE_STYLE[m][0])}</span><span><b>${t}</b><small>${d}</small></span></button>`;
     app.innerHTML = `<div class="scroll"><div class="title pad">
-      <h1>万象録</h1><p class="tag">あなたの一手に、世界が答える。</p>
+      <h1>万象録</h1><p class="tag">あなたの一手に、世界が答える。<span class="ver">${APP_VERSION}</span></p>
       ${S.aiChecked && !S.sample ? '<div class="note-ai">この画面では AI を呼び出せません。claude.ai でこのページを開くと遊べます。</div>' : ''}
       <div><p class="lbl">新しい世界</p><div class="modes">
         ${modeBtn('nation', '国を率いる ― アルディア大陸記', '小国の若き公主として、大帝国・商人の同盟・野心家の王子と渡り合う。')}
@@ -1561,14 +1566,17 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     const nums = g.stats.map((s) => `<div class="sitem"><div class="top"><span>${esc(s.name)}</span><b class="${statBarCls(s) === 'red' ? 'low' : ''}">${s.value}</b></div><div class="bar ${statBarCls(s)}"><i style="width:${(((s.value - s.min) / (s.max - s.min)) * 100).toFixed(1)}%"></i></div><div class="desc">${esc(s.desc)}${s.fatal ? '（0で終幕）' : ''}</div></div>`).join('');
     const prof = g.profile.map((p) => `<div class="sitem"><div class="top"><span>${esc(p.label)}</span><span class="txt">${esc(p.value)}</span></div></div>`).join('');
     const traits = TRAITS.map(([k, n]) => `<div class="sitem"><div class="top"><span>${n}</span><b>${g.traits[k]}</b></div><div class="bar"><i style="width:${g.traits[k]}%"></i></div></div>`).join('');
+    const quick = S.editStats || S.editPlayer ? '' : `<div class="quick"><button id="statedit2">${ic('pen')}数値を直す</button><button id="pledit2">${ic('pen')}あなたの人物を直す</button><button id="tojudge">${ic('bolt')}判定・消耗</button></div>`;
     const edit = S.editStats ? `<div class="box mem pedit"><b>数値を直す</b>${g.stats.map((st) => `<label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(st.name)}<input type="number" data-sv="${esc(st.key)}" value="${st.value}" min="${st.min}" max="${st.max}" style="width:6em;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--surface)"><span style="font-weight:400">（${st.min}〜${st.max}）</span><span style="display:inline-flex;align-items:center;gap:4px;font-weight:400"><input type="checkbox" data-sd="${esc(st.key)}" ${st.drain ? 'checked' : ''}>消耗する値</span></label>`).join('')}
-      <div class="row"><button class="btn primary" id="statsave">保存</button><button class="btn" id="statcancel">やめる</button></div></div>` : `<button class="btn" id="statedit" style="justify-self:start">${ic('pen')}数値を直す</button>`;
-    return `<div class="box"><div class="sgrid">${nums}</div></div>
+      <div class="row"><button class="btn primary" id="statsave">保存</button><button class="btn" id="statcancel">やめる</button></div></div>` : '';
+    return `${quick}
+      <div class="box"><div class="sgrid">${nums}</div></div>
       ${edit}
+      <p class="sec">あなたの人物（強さの判定に毎手使います）</p>${playerBlock(g)}
+      <p class="sec" id="judgeanchor">判定と消耗</p>
       ${judgeControls(g)}
       ${prof ? `<p class="sec">プロフィール</p><div class="box"><div class="sgrid">${prof}</div></div>` : ''}
       <p class="sec">世界から見たあなた（50が普通）</p><div class="box"><div class="sgrid">${traits}</div><p class="muted" style="margin:8px 0 0">${esc(g.perception)}</p></div>
-      <p class="sec">あなたの人物（強さの判定に毎手使います）</p>${playerBlock(g)}
       <p class="sec">立場と目的</p><div class="box"><div>${esc(g.role)}</div>${g.goal ? `<div class="muted" style="margin-top:6px">目指すもの：${esc(g.goal)}</div>` : ''}</div>`;
   }
   function relColor(r) { return r >= 40 ? 'var(--good)' : r >= 0 ? 'var(--accent)' : r > -40 ? 'var(--warn)' : 'var(--bad)'; }
@@ -1658,6 +1666,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         <textarea id="lore" rows="10" maxlength="3000" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface-2);font-size:13.5px;line-height:1.7">${esc(g.lore)}</textarea>
         <div class="row" style="flex-wrap:wrap"><button class="btn primary" id="loresave">保存</button><button class="btn" id="loregen" ${S.busy || S.fillingLore ? 'disabled' : ''}>${S.fillingLore ? 'まとめています…' : 'AI に作り直させる'}</button><span class="muted" id="lorest"></span></div></div>` : ''}
       <div class="box"><b>記録の保存先</b><div class="muted" style="margin-top:4px">${Store.cloud ? 'claude.ai のあなた専用の保存場所（あなた以外は読めません）。PC とスマホで同じ続きを遊べます。' : 'このブラウザの中だけ。ブラウザのデータを消すと失われます。'}<br>物語 ${g.log.length} 件・年代記 ${g.chronicle.length} 行・あらすじに畳んだ出来事 ${g.synopsisUpTo} 件</div></div>
+      <div class="box"><b>この画面の版</b><div class="muted" style="margin-top:4px">${APP_VERSION}。表示が古いと感じたら、このページを閉じて開き直してください。</div></div>
       <button class="act-btn" id="tohome"><span class="ico">${ic('back')}</span><span><b>題へ戻る</b><small>記録は自動で保存されています</small></span></button>
       <button class="btn danger" id="delw" style="justify-self:start">この世界の記録を消す</button>`;
   }
@@ -1723,6 +1732,9 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('judgesel')) $('judgesel').onchange = (e) => { g.settings.judge = e.target.value; S.variants = null; save(); };
     if ($('drainsel')) $('drainsel').onchange = (e) => { g.settings.drain = e.target.value; S.variants = null; save(); };
     if ($('statedit')) $('statedit').onclick = () => { S.editStats = true; renderSheet(); };
+    if ($('statedit2')) $('statedit2').onclick = () => { S.editStats = true; S.full = true; renderSheet(); };
+    if ($('pledit2')) $('pledit2').onclick = () => { S.editPlayer = true; S.full = true; renderSheet(); const el = app.querySelector('[data-plk]'); if (el) { el.scrollIntoView({ block: 'center' }); } };
+    if ($('tojudge')) $('tojudge').onclick = () => { const el = document.getElementById('judgeanchor'); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
     if ($('statcancel')) $('statcancel').onclick = () => { S.editStats = false; renderSheet(); };
     if ($('statsave')) $('statsave').onclick = () => {
       app.querySelectorAll('[data-sv]').forEach((inp) => { const st = g.stats.find((x) => x.key === inp.dataset.sv); if (st) st.value = clamp(Math.round(num(inp.value, st.value)), st.min, st.max); });
