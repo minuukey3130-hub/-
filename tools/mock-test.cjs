@@ -49,7 +49,7 @@ window.claude = { use: async (n) => {
     const res = {
       narrative: '使者は深く頭を下げたが、その目は笑っていなかった。贈り物の金貨を受け取った帝国の使者は、「皇帝陛下はヴェルナの忠誠を楽しみにしておられる」とだけ告げて去った。',
       outcome: 'partial', outcome_reason: '礼は尽くしたが足元を見られた',
-      stat_changes: [{ key: 'stability', delta: 4, reason: '当面の安心' }, { key: 'support', delta: -3, reason: '弱腰と見られた' }, { key: 'military', delta: -25, reason: '大きな消耗' }],
+      stat_changes: [{ key: 'stability', delta: 4, reason: '当面の安心' }, { key: 'support', delta: -3, reason: '弱腰と見られた' }, { key: 'military', delta: -25, reason: '大きな消耗' }, { key: 'intel', delta: -10, reason: '分けて減らす1' }, { key: 'intel', delta: -10, reason: '分けて減らす2' }],
       money_changes: [{ amount: -300, label: '帝国への贈り物' }],
       item_changes: [{ op: 'add', name: '皇帝の親書', icon: '📜', desc: '忠誠を求める文面が並ぶ。' }, { op: 'add', name: '銀の杯', icon: '🏆', desc: '使者の手土産。' }, { op: 'add', name: '干し肉', icon: '🍖', desc: '保存食。' }],
       quest_changes: [{ id: 'q2', status: 'done' }],
