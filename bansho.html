@@ -364,7 +364,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
-  const APP_VERSION = '第14版（11月25日）';
+  const APP_VERSION = '第15版（11月25日）';
+  const ENT_STATUS = ['生存', '負傷', '重傷', '戦闘不能', '拘束', '逃走', '行方不明', '死亡'];
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
   const TRAITS = [['aggression', '好戦'], ['diplomacy', '協調'], ['cunning', '謀略'], ['mercy', '慈悲'], ['ambition', '野心'], ['honor', '信義']];
@@ -889,7 +890,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
   function worldText(g, { short = false } = {}) {
     const stats = g.stats.map((s) => `- ${s.name}（key:${s.key}）${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''}${short ? '' : ' … ' + s.desc}`).join('\n');
     const prof = g.profile.map((p) => `${p.label}: ${p.value}`).join('／');
-    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${hasPersona(e) ? '\n    人物設定: ' + personaLine(e) : ''}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
+    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜状態「${e.status || '生存'}」｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${hasPersona(e) ? '\n    人物設定: ' + personaLine(e) : ''}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
     const traits = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
     const items = g.items.map((i) => i.name).join('、') || 'なし';
     const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
@@ -976,6 +977,8 @@ ${action}
 
 決まり:
 - 結果は今の数値・所持金・持ち物・関係・力に基づいて公平に判定する。足りないもの（お金・力・時間・情報）がある行動は「失敗」か「一部成功」。何でも成功させない。良い策でも代償を伴うことが多い。
+- 【最優先・プレイヤーの意図】プレイヤーの行動文に書かれた意図（倒す・殺す・奪う・裏切る・脅す など）は、そのまま意図として扱う。弱めない・言い換えない・別の目的にすり替えない。プレイヤーの人物の内心・動機・目的を、あなたが決めたり書き換えたりしない（「本当は倒す気はなかった」「別の目的があった」と地の文や世界の事実にしない）。周りの人物が疑ったり誤解したりすることはあってよいが、それはその人物の思い込みとして書く。結果（成功・失敗）は判定で決めるが、失敗しても「意図がなかった」ことにはしない。
+- これはフィクションのゲーム。登場人物を倒す・殺す・重傷を負わせる展開も、判定に従ってそのまま描いてよい（描写は簡潔に、過度に残酷にしない）。原作の主要人物でも、判定の結果が死なら死ぬ。死亡・戦闘不能になった人物は entity_changes の status で記録し、死亡した人物は以後、生きて登場させない。
 - 【最重要0・わかりやすさ】プレイヤーが本文だけ読んで筋を追えるように書く。
   ・1手で新しく出す名前・用語（人物・組織・物・術・手がかり）は多くて2つ。出すときは、それが何かを本文の中で一言で説明する。
   ・前に出た人物・物・手がかりに触れるときは、何だったかを短く思い出させる（例:「昨日拾った、朱で書かれた札」）。
@@ -1001,6 +1004,7 @@ ${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば
 
 次の形の JSON だけを返す（narrative を最初に）:
 {
+  "intent": "プレイヤーの今回の行動の意図を、行動文のとおりに一文で（弱めない・言い換えない）",
   "narrative": "結果と、その後に起きた展開を、情景と人物の反応が伝わるように二人称で（200〜400字）。台詞は「」で、話し手が分かるように",
   "situation": "いま何が起きていて、プレイヤーは何をすればよいかを、初めて読む人にも分かる一文で（60字以内）",
   "terms": [{"term": "今回はじめて出た名前・用語・手がかり（2つまで）", "meaning": "それが何か（30字以内）"}],
@@ -1013,7 +1017,7 @@ ${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば
   "item_changes": [{"op": "add" か "remove", "name": "持ち物", "icon": "絵文字1つ", "desc": "説明"}],
   "quest_changes": [{"id": "既存の id（新規なら省略）", "title": "名前", "desc": "内容", "client": "依頼主", "reward": "報酬", "status": "open/taken/done/failed"}],
   "profile_changes": [{"label": "項目", "value": "新しい値"}],
-  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "note": "この手での出来事（30字以内）", "memory": "この人物がこの先もずっと覚えておくこと（約束・恩・恨み・秘密の共有など。無ければ空文字。30字以内）"}],
+  "entity_changes": [{"id": "id", "relation_delta": 整数, "power_delta": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "status": "生存/負傷/重傷/戦闘不能/拘束/逃走/行方不明/死亡 のどれか（変わったときだけ）", "note": "この手での出来事（30字以内）", "memory": "この人物がこの先もずっと覚えておくこと（約束・恩・恨み・秘密の共有など。無ければ空文字。30字以内）"}],
   "new_entities": [{"name": "新しく関わった人物・勢力", "kind": "種類", "relation": 整数, "power": 整数, "attitude": "態度", "bond": "関係", "mood": "気分", "desc": "どんな存在か", ${PERSONA_SCHEMA}}],
   "world_events": [{"actor": "動いた人物・勢力", "text": "何をしたか（50字以内）"}],
   "news": [{"source": "噂の出どころ", "headline": "世間の受け止め（40字以内）"}],
@@ -1089,6 +1093,7 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
       e.power = clamp(e.power + clamp(Math.round(num(c.power_delta, 0)), -20, 20), 0, 100);
       ['attitude', 'bond', 'mood'].forEach((k) => { if (c[k]) e[k] = str(c[k]).slice(0, 12); });
       if (c.note) e.note = str(c.note).slice(0, 60);
+      if (ENT_STATUS.includes(str(c.status)) && c.status !== (e.status || '生存')) { e.status = c.status; chips.push({ label: `${e.name}: ${c.status}`, delta: c.status === '生存' ? 1 : -1, text: true }); }
       if (str(c.memory).trim()) { e.memory = [...arr(e.memory), `${g.turn + 1}手目: ${str(c.memory).trim().slice(0, 40)}`].slice(-8); }
       if (rd) chips.push({ label: e.name + 'の好感', delta: rd });
     });
@@ -1410,7 +1415,8 @@ JSON だけを返す: {"synopsis": "新しいあらすじ"}`, { cache: false, mo
 
 ${worldText(g, { short: true })}
 
-【${e.name}について】${e.kind}。${e.desc}
+【${e.name}について】${e.kind}。${e.desc}（今の状態: ${e.status || '生存'}）
+【プレイヤーの意図について】プレイヤーの発言の意図を、あなた（${e.name}）が勝手に「本当は別の目的がある」と決めつけて話を進めない。疑うのは自由だが、それは${e.name}の推測として話す。
 【人物設定（必ず守る）】
 ${hasPersona(e) ? PERSONA_KEYS.map(([k, n]) => `- ${n}: ${e.persona[k] || '—'}`).join('\n') : '（未設定。' + e.name + 'の立場と説明から、一貫した人物として演じる）'}
 プレイヤーへの好感 ${e.relation}（−100〜100）／関係「${e.bond || '-'}」／態度「${e.attitude || '-'}」／気分「${e.mood || '-'}」${e.note ? '／最近: ' + e.note : ''}
@@ -1698,7 +1704,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     return [...g.entities].sort((a, b) => b.power - a.power).map((e) => {
       const r = e.relation;
       const left = r >= 0 ? 50 : 50 + r / 2;
-      return `<div class="box pcard"><div class="row">${avatar(e.name, e.kind)}<div style="flex:1;min-width:0"><span class="nm">${esc(e.name)}</span><span class="kind">${esc(e.kind)}</span>${e.isNew === g.turn ? ' <span class="badge partial">新</span>' : ''}</div></div>
+      return `<div class="box pcard"><div class="row">${avatar(e.name, e.kind)}<div style="flex:1;min-width:0"><span class="nm">${esc(e.name)}</span><span class="kind">${esc(e.kind)}</span>${e.isNew === g.turn ? ' <span class="badge partial">新</span>' : ''}${e.status && e.status !== '生存' ? ` <span class="badge ${e.status === '死亡' ? 'failure' : 'partial'}">${esc(e.status)}</span>` : ''}</div></div>
         <div class="kv"><div class="top">好感度<b class="${r > 0 ? 'pos' : r < 0 ? 'neg' : ''}">${r > 0 ? '+' : ''}${r}</b></div><div class="cbar"><i style="left:${left}%;width:${Math.abs(r) / 2}%;background:${relColor(r)}"></i></div></div>
         <div class="kv"><div class="top">影響力<b>${e.power}</b></div><div class="bar amber"><i style="width:${e.power}%"></i></div></div>
         <div class="tline"><span>関係</span><b>${esc(e.bond || '—')}</b></div>
@@ -1708,7 +1714,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         ${personaBlock(e)}
         ${g.deep && g.deep.dossiers[e.id] ? `<details class="mem"><summary><b>人物資料（原作の能力・戦績）</b></summary><div style="white-space:pre-wrap">${esc(g.deep.dossiers[e.id])}</div></details>` : ''}
         ${arr(e.memory).length ? `<div class="mem"><b>${esc(e.name)}が覚えていること</b>${arr(e.memory).slice().reverse().map((m) => `<div>${esc(m)}</div>`).join('')}</div>` : ''}
-        <button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button></div>`;
+        ${e.status === '死亡' ? '' : `<button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button>`}</div>`;
     }).join('');
   }
   function sheetChat(g) {
@@ -1725,7 +1731,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     }
     const withMsg = g.entities.filter((e) => arr(g.chats[e.id]).length).sort((a, b) => arr(g.chats[b.id]).length - arr(g.chats[a.id]).length);
     const rest = g.entities.filter((e) => !arr(g.chats[e.id]).length);
-    const row = (e) => { const list = arr(g.chats[e.id]); const last = list[list.length - 1]; return `<button class="citem" data-chat="${esc(e.id)}">${avatar(e.name, e.kind)}<span class="mid"><span class="t"><b>${esc(e.name)}</b><small>${last ? esc(last.date) : ''}</small></span><p>${last ? esc(last.text) : '…'}</p></span><span style="color:var(--muted)">${ic('right')}</span></button>`; };
+    const row = (e) => { const list = arr(g.chats[e.id]); const last = list[list.length - 1]; if (e.status === '死亡') return `<div class="citem" style="opacity:.5">${avatar(e.name, e.kind)}<span class="mid"><span class="t"><b>${esc(e.name)}</b><small>死亡</small></span><p>${last ? esc(last.text) : '…'}</p></span></div>`; return `<button class="citem" data-chat="${esc(e.id)}">${avatar(e.name, e.kind)}<span class="mid"><span class="t"><b>${esc(e.name)}</b><small>${last ? esc(last.date) : ''}</small></span><p>${last ? esc(last.text) : '…'}</p></span><span style="color:var(--muted)">${ic('right')}</span></button>`; };
     return `<div class="clist">${[...withMsg, ...rest].map(row).join('')}</div>`;
   }
   function sheetWallet(g) {

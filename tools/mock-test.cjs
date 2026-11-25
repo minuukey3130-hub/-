@@ -58,7 +58,7 @@ window.claude = { use: async (n) => {
       item_changes: [{ op: 'add', name: '皇帝の親書', icon: '📜', desc: '忠誠を求める文面が並ぶ。' }, { op: 'add', name: '銀の杯', icon: '🏆', desc: '使者の手土産。' }, { op: 'add', name: '干し肉', icon: '🍖', desc: '保存食。' }],
       quest_changes: [{ id: 'q2', status: 'done' }],
       profile_changes: [{ label: '才覚', value: '慎重' }],
-      entity_changes: [{ id: 'e1', relation_delta: 8, attitude: '見下し', mood: '満足', note: '贈り物を受け取った', memory: '公主から金貨を受け取った' }, { id: 'e6', relation_delta: -10, mood: '不満' }],
+      entity_changes: [{ id: 'e1', relation_delta: 8, attitude: '見下し', mood: '満足', note: '贈り物を受け取った', memory: '公主から金貨を受け取った' }, { id: 'e6', relation_delta: -10, mood: '不満' }, { id: 'e4', status: '死亡', note: '討たれた' }],
       new_entities: [{ name: '帝国使者ドラン', kind: '人物', relation: -5, power: 30, attitude: '慇懃', bond: '監視役', mood: '冷静', desc: '皇帝の側近。' }],
       world_events: [{ actor: '王子レオン', text: '国境の兵を倍に増やした。' }],
       news: [{ source: '酒場の噂', headline: '新しい公主は帝国に尻尾を振ったらしい' }],
