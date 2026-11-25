@@ -93,6 +93,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .story > *, .narr, .datechip, .verdict, .situation, .terms, .explain, .events, .mine, .chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .tabbar button { min-width: 0; }
 .tabbar button span { white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
+.basis { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; display: grid; }
+.basis b { font-size: 11px; letter-spacing: 0.06em; }
 .situation { background: var(--accent-soft); border-radius: 14px; padding: 8px 14px; font-size: 14px; display: grid; gap: 2px; }
 .situation b { font-size: 12px; color: var(--accent); letter-spacing: 0.06em; }
 .terms { border: 1px dashed var(--line); border-radius: 14px; padding: 8px 14px; font-size: 13.5px; display: grid; gap: 2px; }
@@ -362,7 +364,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
-  const APP_VERSION = '第13版（11月25日）';
+  const APP_VERSION = '第14版（11月25日）';
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
   const TRAITS = [['aggression', '好戦'], ['diplomacy', '協調'], ['cunning', '謀略'], ['mercy', '慈悲'], ['ambition', '野心'], ['honor', '信義']];
@@ -592,6 +594,8 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     g.canon = str(g.canon);
     g.location = str(g.location);
     g.lore = str(g.lore);
+    g.deep = g.deep && typeof g.deep === 'object' ? { rules: str(g.deep.rules), player: str(g.deep.player), matchups: str(g.deep.matchups), notes: str(g.deep.notes), dossiers: g.deep.dossiers && typeof g.deep.dossiers === 'object' ? g.deep.dossiers : {}, builtAt: num(g.deep.builtAt, 0) } : null;
+    g.trackers = arr(g.trackers).map((t) => ({ name: str(t.name).slice(0, 40), state: str(t.state).slice(0, 120) })).filter((t) => t.name);
     g.player = g.player && typeof g.player === 'object' ? normPlayer(g.player) : null;
     g.synopsis = str(g.synopsis);
     g.synopsisUpTo = num(g.synopsisUpTo, 0);
@@ -791,10 +795,9 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
         const w = await S.sample.json(genPrompt(work ? 'work' : 'custom', inp), { signal: S.ctl.signal });
         S.G = upgrade(normalizeWorld(w, work ? 'work' : 'custom', inp));
         S.feedLimit = 60;
-        if (work) {
-          st.textContent = '原作資料をまとめています…（1分ほど）';
-          try { await buildLore(S.G); } catch { /* あとで作る */ }
-        }
+        try {
+          await buildDeep(S.G, (i) => { st.textContent = `${work ? '原作' : '世界の設定'}を詳しく調べています（${i + 1}/4）: ${DEEP_STEPS[i]}…　数分かかります`; });
+        } catch { /* あとで「詳しく調べる」からやり直せる */ }
         S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
         save(); renderGame();
       } catch (e) {
@@ -894,9 +897,19 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 ${g.premise}
 【プレイヤー】${g.role}${hasPlayer(g) ? `
 【プレイヤーの人物】（強さ・能力の判定はこれに従う）
-${PLAYER_KEYS.map(([k, n]) => `- ${n}: ${g.player[k] || '—'}`).join('\n')}` : ''}${g.lore ? `
+${PLAYER_KEYS.map(([k, n]) => `- ${n}: ${g.player[k] || '—'}`).join('\n')}` : ''}${g.deep ? `
+【世界のルール（詳しい資料）】（必ず従う）
+${g.deep.rules}
+【プレイヤーの人物の資料】（必ず従う）
+${g.deep.player}
+【登場人物の資料】
+${g.entities.filter((e) => g.deep.dossiers[e.id]).map((e) => `- ${e.name}: ${g.deep.dossiers[e.id]}`).join('\n') || 'なし'}
+【相性分析】（勝ち負けの判定はこれに基づく）
+${g.deep.matchups}` : g.lore ? `
 【原作資料】（世界のルール・強さの基準・人物の能力。必ず従う）
-${g.lore}` : ''}
+${g.lore}` : ''}${g.trackers.length ? `
+【状態の記録】（プレイヤーの人物の能力の状態。毎手かならず反映し、変わったら tracker_changes で更新する）
+${g.trackers.map((t) => `- ${t.name}: ${t.state}`).join('\n')}` : ''}
 【目指すもの】${g.goal || '自由'}
 【現在】${g.date}（${g.turn + 1}手目）
 【いる場所】${g.location || '（未設定。今回の本文から決めて location に書く）'}
@@ -976,6 +989,7 @@ ${action}
 - 「流れに任せて進める」行動なら、プレイヤーの人物らしい自然な行動を選んで進め、物語が大きく動く次の出来事まで描く。
 - 「時間を進める」行動なら、その間の出来事を要約して語り、日付を大きく進め、各勢力の動きを多めに入れる。
 - 【判定の方針】${JUDGE_RULE[judgeOf(g)]}
+- 【原作の仕組みで判定する】結果を書く前に、【世界のルール】【人物資料】【相性分析】【状態の記録】を照らし合わせ、能力の仕組みどうしの関係で勝ち負け・成否を決める。物語の都合・人気・「主要人物だから」・「話を盛り上げるため」で仕組みを曲げない（例: 受けるたびに適応する能力なら、同じ技は回を重ねるごとに通じなくなる。傷が自動で治る能力なら、治療を必要としない）。数や場所の不利も、仕組みに照らして本当に効くかで評価する。
 - 【強さの優先順位】強さは「【プレイヤーの人物】の記述 ＞ 【原作資料】 ＞ 一般的なイメージ」の順で決める。【プレイヤーの人物】に書かれた強さが原作の強者を上回るなら、その強者にもプレイヤーが勝つ。プレイヤーの人物を設定より弱く扱わない（格下・同格以下の相手に苦戦させない、能力を理由なく不発にしない、援軍や偶然で勝負を流さない）。原作の主要人物でも、強さで負けるなら負ける・倒れる・死ぬ（主要人物だからといって守らない）。
 - 【消耗】プレイヤーの消耗は設定上の強さに見合う分だけ。${drainOf(g) === 'none' ? '今の設定では消耗する値（呪力・体力など）は減らさない。' : drainOf(g) === 'light' ? '今の設定では消耗は軽め。' : ''}
 - 数値の変化は stat_changes。消耗（体力・呪力・魔力など）は行動の規模と本人の強さに見合う分だけ: 強い人物の小技や威嚇はほぼ減らない（0〜-2）、普通の戦闘で -3〜-6、全力の大技でも -12 まで。休む・時間が経つと回復させる。大事件以外の増減は ±1〜10。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes（持ち物は物語の鍵になる大事な物だけ。ありふれた物・消耗品・お金で買える雑貨は持ち物にしない。1手で増やすのは多くて1つ。持ち物は${ITEM_MAX}個まで（今${g.items.length}個）。使い切った・渡した・壊れた物は remove）。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
@@ -992,6 +1006,8 @@ ${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば
   "terms": [{"term": "今回はじめて出た名前・用語・手がかり（2つまで）", "meaning": "それが何か（30字以内）"}],
   "outcome": "success" か "partial" か "failure",
   "outcome_reason": "判定の理由（30字以内）",
+  "judge_basis": "判定の根拠になった能力の仕組み・相性（60字以内。例: 無下限に法陣が2回転目。まだ届かない）",
+  "tracker_changes": [{"name": "状態の記録の名前（既存のものは同じ名前で）", "state": "新しい状態"}],
   "stat_changes": [{"key": "数値の key", "delta": 整数, "reason": "短い理由"}],
   "money_changes": [{"amount": 整数（入金は正、支払いは負）, "label": "内容（20字以内）"}],
   "item_changes": [{"op": "add" か "remove", "name": "持ち物", "icon": "絵文字1つ", "desc": "説明"}],
@@ -1097,10 +1113,19 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
     g.chronicle.push(`${g.turn}｜${g.date}｜${str(r.summary, action).slice(0, 60)}`);
     if (str(r.milestone).trim()) g.milestones.push(`${g.turn}手目（${g.date}）: ${str(r.milestone).trim().slice(0, 50)}`);
     const outcome = ['success', 'partial', 'failure'].includes(r.outcome) ? r.outcome : 'partial';
+    // 状態の記録
+    arr(r.tracker_changes).slice(0, 8).forEach((t) => {
+      const name = str(t.name).trim().slice(0, 40);
+      const state = str(t.state).trim().slice(0, 120);
+      if (!name || !state) return;
+      const ex = g.trackers.find((x) => x.name === name);
+      if (ex) { if (ex.state !== state) { ex.state = state; chips.push({ label: `${name}: ${state}`, delta: 1, text: true }); } }
+      else if (g.trackers.length < 10) { g.trackers.push({ name, state }); chips.push({ label: `${name}: ${state}`, delta: 1, text: true }); }
+    });
     const terms = arr(r.terms).slice(0, 3).map((t) => ({ term: str(t.term).trim().slice(0, 20), meaning: str(t.meaning).trim().slice(0, 50), turn: g.turn })).filter((t) => t.term && t.meaning);
     terms.forEach((t) => { const ex = g.glossary.find((x) => x.term === t.term); if (ex) ex.meaning = t.meaning; else g.glossary.push(t); });
     g.glossary = g.glossary.slice(-60);
-    g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), narrative: str(r.narrative), chips, events, situation: str(r.situation).slice(0, 90), terms, location: g.location, moved });
+    g.log.push({ t: 'res', turn: g.turn, date: g.date, action, outcome, reason: str(r.outcome_reason).slice(0, 60), basis: str(r.judge_basis).slice(0, 100), narrative: str(r.narrative), chips, events, situation: str(r.situation).slice(0, 90), terms, location: g.location, moved });
     g.suggestions = arr(r.suggestions).slice(0, 3).map((s) => str(s).slice(0, 80));
     // 進行中の筋: 段階が変わらなければ「進んでいない」を数える
     const incoming = arr(r.threads).map((t) => ({ title: str(t.title).slice(0, 20), stage: str(t.stage).slice(0, 40), status: t.status === 'resolved' ? 'resolved' : 'open' })).filter((t) => t.title);
@@ -1144,6 +1169,7 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
   async function sendAction(action, { regen = false } = {}) {
     action = str(action).trim();
     if (!action || S.busy || !S.G || (S.G.status !== 'playing' && !regen)) return;
+    if (S.deepStep != null) { S.toast = '資料を調べ終わるまで、少し待ってください。'; renderGame(); return; }
     const base = regen && S.variants ? S.variants.base : clone(S.G);
     S.busy = true; S.toast = ''; S.sheet = null; S.showSugg = false;
     if (regen) S.G = clone(base);
@@ -1202,6 +1228,80 @@ JSON だけを返す: {"explain": "説明"}`, { signal: S.ctl.signal, cache: fal
   }
 
   // 作品世界で「原作でのこの時期の状況」がない古い記録に、1 回だけ作る
+  // ===== 詳しい調査（4 段階・一番賢い設定）=====
+  // AI はネットを調べられないので、AI が知っている知識を段階に分けて細かく引き出し、最後に見直させる。
+  const DEEP_STEPS = ['世界のルールを調べています', '人物ごとの資料を作っています', '相性と状態の記録を考えています', '全体を見直しています'];
+  async function buildDeep(g, onStep) {
+    const smp = await getSample();
+    if (!smp) throw { code: 'not_granted' };
+    const work = g.mode === 'work';
+    const src = work ? `既存の作品「${str(g.source && g.source.work)}」` : 'この世界の設定';
+    const base = `【世界】${g.title}／${g.premise}
+【今の時期】${g.date}
+【プレイヤーの人物（プレイヤーが書いた設定）】${str(g.source && g.source.char) || g.role}${hasPlayer(g) ? '\n' + PLAYER_KEYS.map(([k, n]) => `${n}: ${g.player[k]}`).join('／') : ''}
+【主な登場人物】
+${g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜${e.desc}`).join('\n')}`;
+    const strict = work ? 'あなたが原作について確実に知っていることだけを、できるだけ具体的に（技の名前・条件・数・作中の出来事）書く。あいまいなことは「不確か」と書き、推測で設定を作らない。時期（' + g.date + '）に注意し、この時期にはまだ起きていない成長・習得を混ぜない。' : 'この世界の設定から一貫した決まりを具体的に作る。';
+    const step = async (i, prompt) => { if (onStep) onStep(i); return smp.json(prompt, { cache: false, modelTier: 'complex' }); };
+
+    const r1 = await step(0, `あなたは${src}に非常に詳しい資料係。シミュレーションゲームのゲームマスターが勝ち負けを判定するための資料を作る。${strict}
+${base}
+
+「世界のルール」を、日本語で 1500 字以内で書く:
+■力の仕組み（基本の規則・代表的な技の種類・例外や相性。例: 呪力・術式・反転術式・領域展開・縛り・結界など、その作品の決まりを細かく）
+■強さの序列（この時期の主要人物を、強い順に。根拠となる作中の出来事つき）
+■この時期だけの事情（まだ習得していない技、まだ起きていない出来事、この時期の立場）
+JSON だけを返す: {"rules": "本文"}`);
+    const rules = str(r1 && r1.rules).trim();
+
+    const r2 = await step(1, `あなたは${src}に非常に詳しい資料係。${strict}
+${base}
+【世界のルール】
+${rules.slice(0, 1800)}
+
+プレイヤーの人物と、主な登場人物それぞれの「人物資料」を作る。1 人 300 字以内で、次を具体的に:
+・能力の仕組み（発動条件・効果・限界を、規則として）／この時期に使える技・まだ使えない技
+・原作での戦績（誰に勝ち、誰にどう負けたか。根拠となる場面）
+・弱点・相性の悪い相手／強さの格
+プレイヤーの人物は、プレイヤーが書いた設定を最優先し、原作に同じ存在がいればその原作の能力の仕組み（例: 適応・回復・特効など）を漏れなく書く。書かれた強さを弱めない。
+JSON だけを返す: {"player": "プレイヤーの人物の資料", "dossiers": [{"id": "登場人物の id", "text": "資料"}]}`);
+    const dossiers = {};
+    arr(r2 && r2.dossiers).forEach((d) => { const id = str(d.id); if (g.entities.some((e) => e.id === id)) dossiers[id] = str(d.text).trim().slice(0, 600); });
+    const playerDoc = str(r2 && r2.player).trim().slice(0, 900);
+
+    const r3 = await step(2, `あなたは${src}の戦いに詳しい分析係。${strict}
+【世界のルール】
+${rules.slice(0, 1500)}
+【プレイヤーの人物の資料】
+${playerDoc}
+【登場人物の資料】
+${g.entities.map((e) => `- ${e.name}: ${str(dossiers[e.id]).slice(0, 350)}`).join('\n')}
+
+1) 相性分析: プレイヤーの人物が、主な登場人物それぞれと戦った場合（1 対 1、および複数で来た場合）にどうなるかを、能力の仕組みどうしの関係から判定する。「誰が勝つか」と「決め手になる仕組み」を具体的に。物語の都合や人気で結論を曲げない。1000 字以内。
+2) 状態の記録: プレイヤーの人物の能力のうち、戦いや時間の中で変わり続け、毎回覚えておくべき状態を 1〜6 個（例: 適応の進み具合を術式ごとに、溜めている力、縛りの残り、封印の解け具合）。今の値も書く。
+JSON だけを返す: {"matchups": "相性分析", "trackers": [{"name": "記録する状態の名前（例: 法陣の回転・無下限呪術）", "state": "今の状態（例: 0/4 回転、未適応）"}]}`);
+    const matchups = str(r3 && r3.matchups).trim();
+    const trackers = arr(r3 && r3.trackers).slice(0, 8).map((t) => ({ name: str(t.name).slice(0, 40), state: str(t.state).slice(0, 120) })).filter((t) => t.name);
+
+    const r4 = await step(3, `あなたは${src}に非常に詳しい校閲係。次の資料を読み直し、原作の事実・時期（${g.date}）・能力の仕組みとの食い違い、資料どうしの矛盾、プレイヤーの人物を不当に弱く扱っている箇所を直す。${strict}
+【世界のルール】
+${rules}
+【プレイヤーの人物の資料】
+${playerDoc}
+【相性分析】
+${matchups}
+JSON だけを返す: {"rules": "直した世界のルール（直す所が無ければそのまま）", "player": "直したプレイヤーの人物の資料", "matchups": "直した相性分析", "notes": "直した点と、不確かな点の一覧（200字以内）"}`);
+    g.deep = {
+      rules: (str(r4 && r4.rules).trim() || rules).slice(0, 2600),
+      player: (str(r4 && r4.player).trim() || playerDoc).slice(0, 1000),
+      matchups: (str(r4 && r4.matchups).trim() || matchups).slice(0, 1800),
+      notes: str(r4 && r4.notes).trim().slice(0, 400),
+      dossiers, builtAt: Date.now(),
+    };
+    if (trackers.length) g.trackers = trackers;
+    return true;
+  }
+
   // 原作資料: AI が知っている原作の知識を、世界のルール・強さの基準・人物の能力に分けて書き出す（一番賢い設定で 1 回）
   async function buildLore(g) {
     const smp = await getSample();
@@ -1438,6 +1538,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     const limit = S.feedLimit || 60;
     const start = Math.max(0, g.log.length - limit);
     const more = start > 0 ? `<button class="more" id="more">さらに前を読む（あと ${start} 件）</button>` : '';
+    const deepAsk = g.mode !== 'nation' && !g.deep && g.status === 'playing' ? `<div class="explain"><b>${ic('book')}${g.mode === 'work' ? '原作' : '世界の設定'}をもっと詳しく調べられます</b><div>今の資料は簡易版です。4段階で詳しく調べると、能力の仕組み・相性・状態（適応の進み具合など）に沿って判定されるようになります（数分かかります）。</div><button class="btn primary" id="deepgo2" style="justify-self:start;margin-top:6px" ${S.deepStep != null || S.busy ? 'disabled' : ''}>${S.deepStep != null ? `調べています（${S.deepStep + 1}/4）: ${DEEP_STEPS[S.deepStep]}…` : '詳しく調べる'}</button></div>` : '';
     return more + g.log.map((l, i) => {
       if (i < start) return '';
       if (l.t === 'intro') return storyCard(l.text, l.date || '', g.log.find((x) => x.t === 'res') ? '' : g.location);
@@ -1463,11 +1564,12 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       }
       return `<div class="story">${chipsHead(l.date || g.date, l.location, l.moved)}
         <div class="verdict"><span class="badge ${l.outcome}">${label}</span>${esc(l.reason)}</div>
+        ${l.basis ? `<div class="basis"><b>判定の根拠</b>${esc(l.basis)}</div>` : ''}
         <div class="narr">${body}</div>
         ${arr(l.terms).length ? `<div class="terms"><h4>新しく出た言葉</h4>${l.terms.map((t) => `<div><b>${esc(t.term)}</b>${esc(t.meaning)}</div>`).join('')}</div>` : ''}
         ${l.situation ? `<div class="situation"><b>いまの状況</b>${esc(l.situation)}</div>` : ''}
         ${chips ? `<div class="chips">${chips}</div>` : ''}${ev}</div>${tools}`;
-    }).join('');
+    }).join('') + deepAsk;
   }
 
   function renderGame() {
@@ -1518,6 +1620,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if ($('vnext')) $('vnext').onclick = () => { v.idx++; S.G = clone(v.list[v.idx]); save(); renderGame(); };
     if ($('regen')) $('regen').onclick = () => sendAction(v.action, { regen: true });
     if ($('explain')) $('explain').onclick = () => explainSituation();
+    if ($('deepgo2')) $('deepgo2').onclick = () => runDeep(g);
     if ($('edit')) $('edit').onclick = () => { S.G = clone(v.base); S.draft = v.action; S.variants = null; save(); renderGame(); };
     const feed = $('feed');
     if ($('more')) $('more').onclick = () => {
@@ -1573,6 +1676,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       <div class="box"><div class="sgrid">${nums}</div></div>
       ${edit}
       <p class="sec">あなたの人物（強さの判定に毎手使います）</p>${playerBlock(g)}
+      ${g.trackers.length ? `<p class="sec">状態の記録（毎手、判定に使われます）</p><div class="box mem">${g.trackers.map((t) => `<div><span class="pk">${esc(t.name)}</span>${esc(t.state)}</div>`).join('')}</div>` : ''}
       <p class="sec" id="judgeanchor">判定と消耗</p>
       ${judgeControls(g)}
       ${prof ? `<p class="sec">プロフィール</p><div class="box"><div class="sgrid">${prof}</div></div>` : ''}
@@ -1602,6 +1706,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
         <div class="tline"><span>気分</span><b>${esc(e.mood || '—')}</b></div>
         <div class="muted">${esc(e.note ? '最近: ' + e.note : e.desc)}</div>
         ${personaBlock(e)}
+        ${g.deep && g.deep.dossiers[e.id] ? `<details class="mem"><summary><b>人物資料（原作の能力・戦績）</b></summary><div style="white-space:pre-wrap">${esc(g.deep.dossiers[e.id])}</div></details>` : ''}
         ${arr(e.memory).length ? `<div class="mem"><b>${esc(e.name)}が覚えていること</b>${arr(e.memory).slice().reverse().map((m) => `<div>${esc(m)}</div>`).join('')}</div>` : ''}
         <button class="talk" data-talk="${esc(e.id)}">${ic('chat')}話しかける</button></div>`;
     }).join('');
@@ -1657,12 +1762,45 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       <p class="muted" style="margin:-4px 4px 0">呪力・体力など「消耗する値」の減り方。どの値が消耗する値かは、数値タブの「数値を直す」で選べます。</p>`;
   }
 
+  function deepBlock(g) {
+    const work = g.mode === 'work';
+    if (g.mode === 'nation') return '';
+    const running = S.deepStep != null;
+    const head = `<div class="box" style="display:grid;gap:8px"><b>${work ? '原作の詳しい資料' : '世界の詳しい資料'}</b>
+      <span class="muted">${work ? '原作' : 'この世界の設定'}を4段階（世界のルール → 人物ごとの資料 → 相性と状態の記録 → 見直し）で詳しく調べた資料です。毎手、判定の前にこれを照らし合わせます。AI はネットを調べられないため、AI が知っている知識から作ります。間違いは書き直してください。</span>
+      <button class="btn primary" id="deepgo" style="justify-self:start" ${running || S.busy ? 'disabled' : ''}>${running ? `調べています（${S.deepStep + 1}/4）: ${DEEP_STEPS[S.deepStep]}…` : g.deep ? '詳しく調べ直す（数分）' : '詳しく調べる（数分）'}</button>`;
+    if (!g.deep) return head + '</div>';
+    const ta = (id, v, rows) => `<textarea id="${id}" rows="${rows}" maxlength="3000" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface-2);font-size:13.5px;line-height:1.7">${esc(v)}</textarea>`;
+    return head + `
+      <label class="muted">世界のルール${ta('deeprules', g.deep.rules, 8)}</label>
+      <label class="muted">あなたの人物の資料${ta('deepplayer', g.deep.player, 6)}</label>
+      <label class="muted">相性分析${ta('deepmatch', g.deep.matchups, 8)}</label>
+      <label class="muted">状態の記録（1行に「名前: 状態」）${ta('deeptrack', g.trackers.map((t) => `${t.name}: ${t.state}`).join('\n'), 4)}</label>
+      ${g.deep.notes ? `<div class="muted">見直しで直した点・不確かな点: ${esc(g.deep.notes)}</div>` : ''}
+      <div class="muted">登場人物の資料は ${Object.keys(g.deep.dossiers).length} 人分あります（人物タブの各カードで見られます）。</div>
+      <div class="row"><button class="btn primary" id="deepsave">保存</button><span class="muted" id="deepst"></span></div></div>`;
+  }
+
+  async function runDeep(g) {
+    if (S.deepStep != null || S.busy) return;
+    S.deepStep = 0; S.toast = '';
+    const refresh = () => { if (S.G !== g) return; if (S.sheet) renderSheet(); else renderGame(); };
+    refresh();
+    try {
+      await buildDeep(g, (i) => { S.deepStep = i; refresh(); });
+      S.variants = null; if (S.G === g) save();
+    } catch (e) { S.toast = aiMsg(e); }
+    S.deepStep = null;
+    if (S.G === g) renderGame();
+  }
+
   function sheetSettings(g) {
-    return `${judgeControls(g)}
+    return `${deepBlock(g)}
+      ${judgeControls(g)}
       <label class="selrow">${ic('spark')}<b>AI の考え方</b><select id="tiersel">${Object.entries(TIERS).map(([k, v]) => `<option value="${k}" ${tierOf() === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
       <p class="muted" style="margin:-4px 4px 0">速い: すぐ返るが判定は大まか／標準: ふつう／じっくり: 時間はかかるが筋の通った展開に。</p>
       <div class="box"><b>${esc(g.title)}</b><div class="muted" style="margin-top:4px">${esc(g.premise)}</div></div>
-      ${g.mode === 'work' ? `<div class="box" style="display:grid;gap:6px"><b>原作資料</b><span class="muted">AI が知っている原作の知識をまとめたもの。毎手これに従います。間違いや足りない設定は書き直してください（例: 人物の術式・強さ・世界のルール）。</span>
+      ${g.mode === 'work' && !g.deep ? `<div class="box" style="display:grid;gap:6px"><b>原作資料（簡易版）</b><span class="muted">AI が知っている原作の知識をまとめたもの。毎手これに従います。間違いや足りない設定は書き直してください（例: 人物の術式・強さ・世界のルール）。</span>
         <textarea id="lore" rows="10" maxlength="3000" style="width:100%;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--surface-2);font-size:13.5px;line-height:1.7">${esc(g.lore)}</textarea>
         <div class="row" style="flex-wrap:wrap"><button class="btn primary" id="loresave">保存</button><button class="btn" id="loregen" ${S.busy || S.fillingLore ? 'disabled' : ''}>${S.fillingLore ? 'まとめています…' : 'AI に作り直させる'}</button><span class="muted" id="lorest"></span></div></div>` : ''}
       <div class="box"><b>記録の保存先</b><div class="muted" style="margin-top:4px">${Store.cloud ? 'claude.ai のあなた専用の保存場所（あなた以外は読めません）。PC とスマホで同じ続きを遊べます。' : 'このブラウザの中だけ。ブラウザのデータを消すと失われます。'}<br>物語 ${g.log.length} 件・年代記 ${g.chronicle.length} 行・あらすじに畳んだ出来事 ${g.synopsisUpTo} 件</div></div>
@@ -1752,6 +1890,14 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       g.player = normPlayer(p); S.editPlayer = false; S.variants = null; save(); renderSheet();
     };
     if ($('loresave')) $('loresave').onclick = () => { g.lore = $('lore').value.trim().slice(0, 3000); S.variants = null; save(); $('lorest').textContent = '保存しました'; };
+    if ($('deepgo')) $('deepgo').onclick = () => runDeep(g);
+    if ($('deepsave')) $('deepsave').onclick = () => {
+      g.deep.rules = $('deeprules').value.trim().slice(0, 3000);
+      g.deep.player = $('deepplayer').value.trim().slice(0, 1500);
+      g.deep.matchups = $('deepmatch').value.trim().slice(0, 3000);
+      g.trackers = $('deeptrack').value.split('\n').map((l) => { const i = l.search(/[:：]/); return i > 0 ? { name: l.slice(0, i).trim().slice(0, 40), state: l.slice(i + 1).trim().slice(0, 120) } : null; }).filter((t) => t && t.name);
+      S.variants = null; save(); $('deepst').textContent = '保存しました';
+    };
     if ($('loregen')) $('loregen').onclick = async () => {
       S.fillingLore = true; renderSheet();
       try { if (await buildLore(g)) { S.variants = null; save(); } } catch (e) { S.toast = aiMsg(e); }

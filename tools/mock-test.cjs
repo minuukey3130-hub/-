@@ -41,6 +41,10 @@ window.claude = { use: async (n) => {
     await new Promise(r => setTimeout(r, 250));
     if (input.includes('"reply"')) return { reply: '……用件は手短に。帝国の使者が来る前に、腹を決めておくことだ。', relation_delta: 2, mood: '思案', memo: '' };
     if (input.includes('"personas"')) return { personas: [...input.matchAll(/id:([a-z0-9_]+)｜/g)].map((m) => ({ id: m[1], persona: { personality: '寡黙', speech: '一人称は「拙者」', values: '忠義', never: '嘘' } })) };
+    if (input.includes('"notes"')) return { rules: '見直した世界のルール', player: '見直したプレイヤー資料', matchups: '見直した相性分析: プレイヤーが勝つ', notes: '時期の取り違えを1件直した' };
+    if (input.includes('"trackers"')) return { matchups: '相性分析', trackers: [{ name: '法陣の回転・無下限', state: '0/4 回転' }] };
+    if (input.includes('"dossiers"')) return { player: 'プレイヤー資料', dossiers: [{ id: 'e1', text: '帝国の資料' }, { id: 'e5', text: '宰相の資料' }] };
+    if (input.includes('"rules": "本文"')) return { rules: '世界のルール' };
     if (input.includes('"lore"')) return { lore: '■世界のルール テスト用の原作資料。' };
     if (input.includes('強さの判定に使える形にまとめる')) return { player: { name: '公主', abilities: '外交と剣術', power: '一国の君主として中堅', limits: '戦場経験がない' } };
     if (input.includes('"explain"')) return { explain: 'いまあなたは玉座の間にいます。帝国の使者が贈り物を受け取って帰りました。次は将軍カイラをなだめるか、王子レオンと話すことができます。' };
@@ -60,7 +64,7 @@ window.claude = { use: async (n) => {
       news: [{ source: '酒場の噂', headline: '新しい公主は帝国に尻尾を振ったらしい' }],
       trait_changes: { aggression: -3, diplomacy: 5 }, perception: '帝国に従順な若君と見られ始めている。',
       situation: '帝国の使者は去ったが、将軍カイラの不満が高まっている。次は国内を固めたい。', terms: [{ term: '皇帝の親書', meaning: '帝国への忠誠を求める手紙' }],
-      location: '城の中庭',
+      location: '城の中庭', judge_basis: '使者は格下。礼で押し切れる', tracker_changes: [{ name: '法陣の回転・無下限', state: '1/4 回転' }],
       new_date: '大陸暦812年 春・4日目', summary: '帝国に贈り物を送り衝突を避けた', milestone: '帝国に贈り物を送った', threads: [{ title: '帝国との緊張', stage: '贈り物で一時休戦', status: 'open' }, { title: 'カイラの不満', stage: '将軍が苛立っている', status: 'open' }],
       suggestions: ['将軍カイラをなだめる', 'レオンに使者を送る', '商人同盟と取引を見直す'], ending: null };
     const raw = JSON.stringify(res);
