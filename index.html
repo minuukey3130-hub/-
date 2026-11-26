@@ -4,17 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>テスト対策問題集</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.18.11/dist/katex.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
     <button id="homeBtn" class="link">📚 テスト対策問題集</button>
     <div class="topbar-actions">
+      <span id="syncBadge" class="muted small"></span>
       <button id="exportBtn" class="ghost">エクスポート</button>
       <label class="ghost file-label">インポート<input id="importInput" type="file" accept="application/json" hidden></label>
+      <button id="settingsBtn" class="ghost" title="設定">⚙️ 設定</button>
     </div>
   </header>
-  <main id="app"></main>
+  <main id="app"><div class="empty">読み込み中…</div></main>
+
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.18.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.18.11/dist/contrib/auto-render.min.js"
+          onload="window.renderMath && renderMath(document.getElementById('app'))"></script>
+  <script src="ai.js"></script>
+  <script src="sync.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
