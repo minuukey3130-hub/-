@@ -47,6 +47,29 @@ function setSettings(patch) {
   return next;
 }
 
+// ===== AIの利用料金の記録（この端末のみ） =====
+const USAGE_KEY = 'exam-prep-ai-usage';
+function getUsageLog() {
+  try { return { total: 0, count: 0, months: {}, history: [], ...JSON.parse(localStorage.getItem(USAGE_KEY) || '{}') }; }
+  catch (e) { return { total: 0, count: 0, months: {}, history: [] }; }
+}
+function recordUsage(u, subjectName) {
+  const log = getUsageLog();
+  const cost = u.cost || 0;
+  const month = new Date().toLocaleDateString('sv-SE').slice(0, 7);
+  log.total += cost;
+  log.count += 1;
+  log.months[month] = (log.months[month] || 0) + cost;
+  log.history.unshift({ at: Date.now(), subject: subjectName, model: u.model, input: u.input, output: u.output, cost: u.cost });
+  log.history = log.history.slice(0, 50);
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify(log)); } catch (e) { /* 記録できなくても生成は続ける */ }
+  return log;
+}
+function usd(n) {
+  if (n === null || n === undefined) return '不明';
+  return '$' + (n < 0.01 ? n.toFixed(4) : n < 1 ? n.toFixed(3) : n.toFixed(2));
+}
+
 function sampleData() {
   const q = (o) => ({ id: uid(), stats: { correct: 0, wrong: 0 }, explanation: '', ...o });
   return {
@@ -695,11 +718,19 @@ function renderGenerate(subjectId) {
         <span id="genStatus" class="muted"></span>
       </div>
       <p class="muted small">資料は Claude API（Anthropic）に送信されます。モデル: ${esc(settings.model)}</p>
+      <p class="muted small" id="costLine"></p>
     </form>
     <div id="genResult"></div>`);
 
   const form = app.querySelector('#genForm');
   const status = app.querySelector('#genStatus');
+  const renderCostLine = () => {
+    const log = getUsageLog();
+    const month = new Date().toLocaleDateString('sv-SE').slice(0, 7);
+    const el = app.querySelector('#costLine');
+    if (el) el.textContent = log.count ? `AI利用料金（この端末）: 今月 約${usd(log.months[month] || 0)} ・ 累計 約${usd(log.total)}（${log.count}回）` : '';
+  };
+  renderCostLine();
   app.querySelector('#back').onclick = () => go('subject', s.id);
   app.querySelector('#genFiles').onchange = (e) => {
     files = [...e.target.files];
@@ -715,7 +746,8 @@ function renderGenerate(subjectId) {
     btn.disabled = true;
     status.textContent = '生成中…（資料の量によっては1〜2分かかります）';
     try {
-      const generated = await AI.generate({
+      let usage = null;
+      const { questions: generated } = await AI.generate({
         apiKey: settings.apiKey,
         model: settings.model,
         subjectName: s.name,
@@ -725,20 +757,31 @@ function renderGenerate(subjectId) {
         kind: form.kind.value,
         difficulty: form.difficulty.value,
         onProgress: (n) => { status.textContent = `生成中…（${n.toLocaleString()}文字 受信）`; },
+        onUsage: (u) => { usage = u; recordUsage(u, s.name); },
       });
       status.textContent = '';
-      showGenerated(s, generated);
+      showGenerated(s, generated, usage);
     } catch (err) {
       status.textContent = '';
       alert(err.message || String(err));
+      renderCostLine();
     } finally {
       btn.disabled = false;
     }
   };
 }
 
-function showGenerated(s, generated) {
+function showGenerated(s, generated, usage) {
   const box = app.querySelector('#genResult');
+  const log = getUsageLog();
+  const costHtml = usage ? `
+      <div class="cost-box">
+        今回の料金 <strong>約${usd(usage.cost)}</strong>
+        <span class="muted small">（入力 ${usage.input.toLocaleString()} ・ 出力 ${usage.output.toLocaleString()} トークン、${esc(usage.model)}）</span>
+        <div class="muted small">累計 約${usd(log.total)}（${log.count}回）</div>
+      </div>` : '';
+  const costEl = app.querySelector('#costLine');
+  if (costEl) costEl.textContent = '';
   if (!generated.length) { box.innerHTML = '<div class="card empty">問題を作成できませんでした。資料を増やして再度お試しください。</div>'; return; }
   box.innerHTML = `
     <div class="card">
@@ -746,6 +789,7 @@ function showGenerated(s, generated) {
         <h2 style="margin:0">生成された問題（${generated.length}）</h2>
         <label class="row"><input type="checkbox" id="checkAll" checked> すべて選択</label>
       </div>
+      ${costHtml}
       <p class="muted small">AIの問題は誤りを含むことがあります。追加後に「編集」から直せます。</p>
       ${generated.map((q, i) => `
         <label class="q-list-item gen-item">
@@ -796,6 +840,31 @@ function renderSettings() {
       <div class="row"><button type="submit">保存</button><span id="aiSaved" class="muted"></span></div>
     </form>
 
+    <div class="card">
+      <h2>AI利用料金（この端末）</h2>
+      ${(() => {
+        const log = getUsageLog();
+        if (!log.count) return '<p class="muted">まだ利用していません。</p>';
+        const months = Object.entries(log.months).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6);
+        return `
+          <div class="stats-row">
+            <div><div class="stat">${usd(log.months[new Date().toLocaleDateString('sv-SE').slice(0, 7)] || 0)}</div><div class="muted">今月</div></div>
+            <div><div class="stat">${usd(log.total)}</div><div class="muted">累計（${log.count}回）</div></div>
+          </div>
+          <table class="usage-table">
+            <thead><tr><th>日時</th><th>科目</th><th>モデル</th><th class="num">トークン（入力/出力）</th><th class="num">料金</th></tr></thead>
+            <tbody>${log.history.slice(0, 10).map((h) => `<tr>
+              <td>${new Date(h.at).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
+              <td>${esc(h.subject || '')}</td><td>${esc((h.model || '').replace('claude-', ''))}</td>
+              <td class="num">${(h.input || 0).toLocaleString()} / ${(h.output || 0).toLocaleString()}</td>
+              <td class="num">${usd(h.cost)}</td></tr>`).join('')}</tbody>
+          </table>
+          ${months.length > 1 ? `<p class="muted small">月別: ${months.map(([m, c]) => `${m} ${usd(c)}`).join(' ・ ')}</p>` : ''}
+          <div class="row"><button class="ghost" id="resetUsage">記録をリセット</button></div>`;
+      })()}
+      <p class="muted small">トークン数と公開料金から計算した目安です（税・為替は含みません）。正確な請求額は <a href="https://platform.claude.com/" target="_blank" rel="noopener">Claude Console</a> で確認できます。別の端末で使った分はここには含まれません。</p>
+    </div>
+
     <form class="card" id="syncForm">
       <h2>ログインと端末間同期（Firebase）</h2>
       <p class="muted small">自分の Firebase プロジェクトを作り、ウェブアプリの設定（firebaseConfig）を貼り付けてください。手順は README に書いてあります。</p>
@@ -810,6 +879,13 @@ function renderSettings() {
       <div>状態：<span id="syncStatus">${esc(Sync.status)}</span></div>
     </form>`);
 
+  const resetUsage = app.querySelector('#resetUsage');
+  if (resetUsage) resetUsage.onclick = () => {
+    if (confirm('AI利用料金の記録をリセットしますか？（実際の請求には影響しません）')) {
+      localStorage.removeItem(USAGE_KEY);
+      renderSettings();
+    }
+  };
   app.querySelector('#aiForm').onsubmit = (e) => {
     e.preventDefault();
     setSettings({ apiKey: e.target.apiKey.value.trim(), model: e.target.model.value });

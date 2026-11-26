@@ -10,6 +10,16 @@ const AI_MODELS = [
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5（高速・低コスト）' },
 ];
 
+// 料金（米ドル / 100万トークン）。フォールバックで別モデルが応答した場合のために旧モデルも入れておく
+const AI_PRICES = {
+  'claude-opus-5-5': { input: 4, output: 20 },
+  'claude-sonnet-5-5': { input: 2, output: 10 },
+  'claude-haiku-5-5': { input: 0.10, output: 0.50, longInput: 0.50, longOutput: 2.50, longFrom: 100000 },
+  'claude-opus-5': { input: 5, output: 25 },
+  'claude-opus-4-8': { input: 5, output: 25 },
+  'claude-sonnet-5': { input: 2, output: 10 },
+};
+
 const QUESTION_SCHEMA = {
   type: 'object',
   properties: {
@@ -36,6 +46,24 @@ const QUESTION_SCHEMA = {
 
 const AI = {
   _sdk: null,
+
+  // API の usage から費用（米ドル）を計算する。思考に使ったトークンも output_tokens に含まれる
+  costOf(model, usage) {
+    const key = Object.keys(AI_PRICES).find((k) => model === k || model.startsWith(k + '-')) || model;
+    const price = AI_PRICES[key];
+    const u = usage || {};
+    const input = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+    const output = u.output_tokens || 0;
+    if (!price) return { model, input, output, cost: null };
+    const long = price.longFrom && input > price.longFrom;
+    const pin = long ? price.longInput : price.input;
+    const pout = long ? price.longOutput : price.output;
+    const cost = ((u.input_tokens || 0) * pin
+      + (u.cache_creation_input_tokens || 0) * pin * 1.25
+      + (u.cache_read_input_tokens || 0) * pin * 0.1
+      + output * pout) / 1e6;
+    return { model, input, output, cost };
+  },
 
   async sdk() {
     if (!this._sdk) this._sdk = (await import(AI_SDK_URL)).default;
@@ -76,9 +104,9 @@ const AI = {
 
   /**
    * 資料から問題を生成する。
-   * @returns {Promise<Array>} アプリ形式の問題配列（id/stats は未設定）
+   * @returns {Promise<{questions: Array, usage: Object}>} 問題配列（id/stats は未設定）と費用
    */
-  async generate({ apiKey, model, subjectName, text, files, count, kind, difficulty, onProgress }) {
+  async generate({ apiKey, model, subjectName, text, files, count, kind, difficulty, onProgress, onUsage }) {
     const Anthropic = await this.sdk();
     const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
 
@@ -133,6 +161,9 @@ const AI = {
       throw err;
     }
 
+    const usage = this.costOf(message.model || model, message.usage);
+    onUsage && onUsage(usage); // 失敗時も料金はかかるので先に記録する
+
     if (message.stop_reason === 'refusal') throw new Error('この資料からは問題を作成できませんでした（安全性の判定により停止）。');
     if (message.stop_reason === 'max_tokens') throw new Error('出力が長すぎて途中で切れました。問題数を減らして再度お試しください。');
 
@@ -140,7 +171,7 @@ const AI = {
     let data;
     try { data = JSON.parse(json); } catch (e) { throw new Error('AIの出力を読み取れませんでした。もう一度お試しください。'); }
 
-    return (data.questions || []).map((q) => {
+    const questions = (data.questions || []).map((q) => {
       if (q.type === 'choice') {
         const choices = (q.choices || []).map((c) => String(c).trim()).filter(Boolean);
         if (choices.length < 2 || q.answer_index < 0 || q.answer_index >= choices.length) return null;
@@ -149,5 +180,6 @@ const AI = {
       if (!q.answer_text || !q.answer_text.trim()) return null;
       return { type: 'text', question: q.question.trim(), answer: q.answer_text.trim(), explanation: q.explanation.trim() };
     }).filter((q) => q && q.question);
+    return { questions, usage };
   },
 };
