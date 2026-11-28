@@ -9,3 +9,6 @@
 `bansho.html` 1 枚で動く。claude.ai の Artifact として公開し、`sample` 機能（ページから Claude を呼ぶ）で AI を使う。claude.ai の外で開くと AI は使えない。
 
 仕様は [docs/DESIGN.md](docs/DESIGN.md)。
+
+## 素材の出典
+- 都道府県の地図の形: [Natural Earth](https://www.naturalearthdata.com/) 1:10m Admin 1（パブリックドメイン）。`tools/geo-convert.py` で SVG に変換・簡略化して `bansho.html` に埋め込んでいる。

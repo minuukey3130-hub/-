@@ -50,6 +50,15 @@ const MOCK = src.slice(src.indexOf('const MOCK = `') + 14, src.indexOf('`;\n\n(a
   await pg.tap('.tabbar [data-tab="map"]'); await pg.waitForTimeout(300);
   await pg.tap('[data-pt="miyazaki"]'); await pg.waitForTimeout(200);
   await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_5_map.png' });
+  const D = require('path').resolve(process.argv[2] || '.');
+  await pg.evaluate(() => document.querySelector('.jmap').scrollIntoView());
+  await pg.screenshot({ path: D + '/pref_5b_mapfull.png' });
+  for (const z of ['east', 'west']) { await pg.tap(`[data-jz="${z}"]`); await pg.waitForTimeout(150); await pg.evaluate(() => document.querySelector('.jzoom').scrollIntoView()); await pg.screenshot({ path: D + `/pref_5c_${z}.png` }); }
+  await pg.tap('[data-jz="east"]'); await pg.waitForTimeout(150); await pg.evaluate(() => document.querySelector('[data-pt="tokyo"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await pg.waitForTimeout(150);
+  const selName = await pg.evaluate(() => document.querySelector('.sheet .body b[style*="18px"]')?.textContent);
+  const overflow = await pg.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+  console.log({ selName, overflow });
+  await pg.tap('[data-jz="all"]'); await pg.waitForTimeout(150);
   await pg.evaluate(() => document.querySelector('.sheet .body').scrollTop = 9999);
   await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_6_map2.png' });
   const st = await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('__fakedb')); const w = Object.values(o).find(v => v.kind === 'world'); const R = w.pref.regions; return { miyazaki: R.miyazaki.owner, hokkaido: R.hokkaido.owner, okinawa: R.okinawa.owner, tottori: R.tottori.owner, alliances: w.pref.alliances.map(a => a.name + ':' + a.members.length), tottoriStatus: w.entities.find(e => e.pref === 'tottori').status, ents: w.entities.length }; });
