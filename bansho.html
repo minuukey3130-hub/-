@@ -352,7 +352,15 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .fld { display: grid; gap: 6px; }
 .fld label { font-weight: 700; font-size: 14px; }
 .fld small { color: var(--muted); font-size: 12px; }
-.fld input, .fld textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.scens { display: grid; gap: 8px; }
+.scen { display: flex; gap: 12px; align-items: flex-start; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; cursor: pointer; min-width: 0; }
+.scen:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.scen input { flex: none; width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--accent); }
+.scen-t { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.scen-t b { font-size: 15px; }
+.scen-t .muted { line-height: 1.6; overflow-wrap: anywhere; }
+.fld select { max-width: 100%; }
+.fld input:not([type="radio"]):not([type="checkbox"]), .fld textarea { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
 .fld textarea { min-height: 96px; resize: vertical; }
 .status { font-size: 14px; color: var(--muted); }
 .status.err { color: var(--bad); }
@@ -370,7 +378,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
-  const APP_VERSION = '第16版（11月28日）';
+  const APP_VERSION = '第17版（11月28日）';
   const ENT_STATUS = ['生存', '負傷', '重傷', '戦闘不能', '拘束', '逃走', '行方不明', '死亡'];
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
@@ -1045,7 +1053,7 @@ ${lines.join('\n')}
       <div class="fld"><label for="f-pref">あなたの都道府県</label><select id="f-pref" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px">
         ${areas.map((a) => `<optgroup label="${a}">${PREF.filter((p) => p[3] === a).map((p) => `<option value="${p[0]}" ${p[0] === 'oita' ? 'selected' : ''}>${p[1]}（人口${p[4]}万人）</option>`).join('')}</optgroup>`).join('')}
       </select><small id="f-prefinfo"></small></div>
-      <div class="fld"><label>始まり方</label>${Object.entries(PF_SCEN).map(([k, [n, d]]) => `<label class="selrow" style="align-items:flex-start"><input type="radio" name="scen" value="${k}" ${k === 'normal' ? 'checked' : ''} style="margin-top:6px"><span><b>${n}</b><br><span class="muted">${d}</span></span></label>`).join('')}</div>
+      <div class="fld"><span style="font-weight:700;font-size:14px">始まり方</span><div class="scens">${Object.entries(PF_SCEN).map(([k, [n, d]]) => `<label class="scen"><input type="radio" name="scen" value="${k}" ${k === 'normal' ? 'checked' : ''}><span class="scen-t"><b>${n}</b><span class="muted">${d}</span></span></label>`).join('')}</div></div>
       <div class="row"><button class="btn primary" id="go">始める</button></div>
     </div></div>`;
     const $ = (id) => document.getElementById(id);
