@@ -378,7 +378,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
-  const APP_VERSION = '第17版（11月28日）';
+  const APP_VERSION = '第18版（11月28日）';
   const ENT_STATUS = ['生存', '負傷', '重傷', '戦闘不能', '拘束', '逃走', '行方不明', '死亡'];
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
@@ -1051,18 +1051,23 @@ ${lines.join('\n')}
       <h2>都道府県バトルロワイヤル</h2>
       <p class="lead">2026年4月1日、ある朝を境に日本は47の都道府県に割れた。あなたはひとつの都道府県の知事補佐として、同盟・侵攻・裏切りを重ね、日本統一を目指す。攻め込めるのは陸続きか、橋・トンネルでつながった県だけ。</p>
       <div class="fld"><label for="f-pref">あなたの都道府県</label><select id="f-pref" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px">
-        ${areas.map((a) => `<optgroup label="${a}">${PREF.filter((p) => p[3] === a).map((p) => `<option value="${p[0]}" ${p[0] === 'oita' ? 'selected' : ''}>${p[1]}（人口${p[4]}万人）</option>`).join('')}</optgroup>`).join('')}
+        <option value="" selected disabled>― 都道府県を選ぶ ―</option>
+        <option value="random">おまかせ（ランダムに決める）</option>
+        ${areas.map((a) => `<optgroup label="${a}">${PREF.filter((p) => p[3] === a).map((p) => `<option value="${p[0]}">${p[1]}（人口${p[4]}万人）</option>`).join('')}</optgroup>`).join('')}
       </select><small id="f-prefinfo"></small></div>
       <div class="fld"><span style="font-weight:700;font-size:14px">始まり方</span><div class="scens">${Object.entries(PF_SCEN).map(([k, [n, d]]) => `<label class="scen"><input type="radio" name="scen" value="${k}" ${k === 'normal' ? 'checked' : ''}><span class="scen-t"><b>${n}</b><span class="muted">${d}</span></span></label>`).join('')}</div></div>
       <div class="row"><button class="btn primary" id="go">始める</button></div>
     </div></div>`;
     const $ = (id) => document.getElementById(id);
-    const info = () => { const p = PF[$('f-pref').value]; $('f-prefinfo').textContent = `強み: ${p.spec}／気質: ${p.temper}／隣接: ${[...p.adj].map((n) => PF[n].short + (p.links[n] ? `（${p.links[n]}）` : '')).join('・') || 'なし（海のみ）'}`; };
+    const info = () => { const v = $('f-pref').value; const p = PF[v]; if (!p) { $('f-prefinfo').textContent = v === 'random' ? '始めるときに、47都道府県からランダムに決まります。' : ''; return; } $('f-prefinfo').textContent = `強み: ${p.spec}／気質: ${p.temper}／隣接: ${[...p.adj].map((n) => PF[n].short + (p.links[n] ? `（${p.links[n]}）` : '')).join('・') || 'なし（海のみ）'}`; };
     $('f-pref').onchange = info; info();
     $('back').onclick = () => renderTitle();
     $('go').onclick = () => {
       const scen = (app.querySelector('input[name="scen"]:checked') || {}).value || 'normal';
-      S.G = upgrade(newPrefWorld($('f-pref').value, scen));
+      let home = $('f-pref').value;
+      if (!home) { $('f-prefinfo').innerHTML = '<span style="color:var(--bad);font-weight:700">先に、あなたの都道府県を選んでください。</span>'; $('f-pref').focus(); return; }
+      if (home === 'random') home = PREF[Math.floor(Math.random() * PREF.length)][0];
+      S.G = upgrade(newPrefWorld(home, scen));
       S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
       S.feedLimit = 60; S.variants = null;
       save(); renderGame();
