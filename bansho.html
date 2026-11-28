@@ -93,6 +93,12 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 .story > *, .narr, .datechip, .verdict, .situation, .terms, .explain, .events, .mine, .chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .tabbar button { min-width: 0; }
 .tabbar button span { white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
+.jmap { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: minmax(26px, auto); gap: 3px; margin-top: 8px; }
+.pt { border-radius: 6px; color: #fff; font-size: 10.5px; font-weight: 700; line-height: 1.1; padding: 6px 0; white-space: nowrap; letter-spacing: -0.04em; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35); min-width: 0; overflow: hidden; border: 2px solid transparent; }
+.pt.own { border-color: var(--fg); box-shadow: 0 0 0 1px var(--surface) inset; }
+.pt.sel { outline: 3px solid var(--warn); outline-offset: 1px; }
+.pt.taken { background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.22) 0 3px, transparent 3px 7px) !important; }
+.swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; }
 .basis { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; display: grid; }
 .basis b { font-size: 11px; letter-spacing: 0.06em; }
 .situation { background: var(--accent-soft); border-radius: 14px; padding: 8px 14px; font-size: 14px; display: grid; gap: 2px; }
@@ -364,7 +370,7 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
 (() => {
   // ================= 基本 =================
   const SAVE_KEY = 'banshoroku.saves.v2';
-  const APP_VERSION = '第15版（11月25日）';
+  const APP_VERSION = '第16版（11月28日）';
   const ENT_STATUS = ['生存', '負傷', '重傷', '戦闘不能', '拘束', '逃走', '行方不明', '死亡'];
   const S = { sample: null, aiChecked: false, G: null, busy: false, ctl: null, sheet: null, full: false, variants: null, chatWith: null, chatBusy: false, toast: '', showSugg: false, itemSel: null, histOpen: false };
   const app = document.getElementById('app');
@@ -705,11 +711,272 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     };
   }
 
+  // ===== 都道府県バトルロワイヤル: 47 都道府県のデータ =====
+  // [id, 名前, 呼び名(短), 地方, 人口(万人・2020年頃), 特産・強み, 気質, 口調, 地図の列, 地図の行, 海に面するか]
+  const PREF = [
+    ['hokkaido', '北海道', '北海道', '北海道', 522, '乳製品・海産物・広大な農地。食料自給率が高い', 'おおらかで開拓者気質', '「〜だべ」「なまら」「〜っしょ」の北海道弁', 10, 0, 1],
+    ['aomori', '青森県', '青森', '東北', 124, 'りんご・マグロ・青函トンネルの本州側出口', '粘り強く寡黙', '「〜だべ」「わ（私）」「〜へ」の津軽弁', 10, 2, 1],
+    ['iwate', '岩手県', '岩手', '東北', 121, '南部鉄器・わかめ・広い県土', '実直で忍耐強い', '「〜だべ」「じぇじぇ」の南部弁', 10, 3, 1],
+    ['miyagi', '宮城県', '宮城', '東北', 230, '牛タン・米・仙台港。東北の中心', '東北の盟主を自任する', '「〜だっちゃ」「いぎなり」の仙台弁', 10, 4, 1],
+    ['akita', '秋田県', '秋田', '東北', 96, '米・日本酒・林業', '我慢強く酒に強い', '「〜だべ」「んだ」の秋田弁', 9, 3, 1],
+    ['yamagata', '山形県', '山形', '東北', 107, 'さくらんぼ・米・温泉', '控えめで粘り強い', '「〜だず」「〜べ」の山形弁', 9, 4, 1],
+    ['fukushima', '福島県', '福島', '東北', 183, '桃・米・会津の武士気質。6県に囲まれた要地', '義理堅く頑固（会津の「ならぬことはならぬ」）', '「〜だべ」「〜だない」の福島弁', 9, 5, 1],
+    ['ibaraki', '茨城県', '茨城', '関東', 287, '農業（全国有数）・つくばの研究学園・港', '飾らず率直', '「〜だっぺ」「ごじゃっぺ」の茨城弁', 11, 7, 1],
+    ['tochigi', '栃木県', '栃木', '関東', 193, 'いちご・日光・内陸の工業', 'のんびりして我慢強い', '「〜だべ」「〜だいね」の栃木弁', 11, 6, 0],
+    ['gunma', '群馬県', '群馬', '関東', 194, 'こんにゃく・工業・からっ風', 'かかあ天下で気が強い', '「〜だんべ」「〜べぇ」の上州弁', 10, 6, 0],
+    ['saitama', '埼玉県', '埼玉', '関東', 734, '巨大なベッドタウン・物流網', '自虐的だがしたたか', '標準語に近く「〜じゃん」「〜べ」が混じる', 10, 7, 0],
+    ['chiba', '千葉県', '千葉', '関東', 628, '成田空港・港湾・落花生・アクアラインの東端', '開放的でマイペース', '「〜だっぺ」「〜べ」の房総弁が混じる', 11, 8, 1],
+    ['tokyo', '東京都', '東京', '関東', 1405, '首都機能・金融・圧倒的な人口と経済', '自信家で合理的', '標準語', 10, 8, 1],
+    ['kanagawa', '神奈川県', '神奈川', '関東', 924, '横浜港・工業・アクアラインの西端', '洗練され誇り高い', '「〜じゃん」「〜だべ」の浜言葉', 9, 8, 1],
+    ['niigata', '新潟県', '新潟', '中部', 220, '米・日本酒・長い海岸線', '辛抱強く地道', '「〜らて」「〜ら」の新潟弁', 8, 5, 1],
+    ['toyama', '富山県', '富山', '中部', 103, '薬売り・水産・水力発電', '勤勉で倹約家', '「〜ちゃ」「〜け」の富山弁', 7, 5, 1],
+    ['ishikawa', '石川県', '石川', '中部', 113, '金沢の工芸・海産物・加賀百万石の誇り', '上品で慎重', '「〜まっし」「〜げん」の金沢弁', 6, 5, 1],
+    ['fukui', '福井県', '福井', '中部', 77, '原子力発電所・眼鏡・恐竜', '堅実で働き者', '「〜やざ」「〜のぉ」の福井弁', 6, 6, 1],
+    ['yamanashi', '山梨県', '山梨', '中部', 81, 'ぶどう・ワイン・富士山・首都の水源', '人付き合いが濃い', '「〜ずら」「〜け」の甲州弁', 9, 7, 0],
+    ['nagano', '長野県', '長野', '中部', 205, '山岳の要害・精密機械・そば。8県と接する', '理屈っぽく教育熱心', '「〜ずら」「〜だに」の信州弁', 8, 6, 0],
+    ['gifu', '岐阜県', '岐阜', '中部', 198, '刃物・関ヶ原（東西の境）・山林', '堅実で東西の間を読む', '「〜やお」「〜やで」の美濃弁', 7, 6, 0],
+    ['shizuoka', '静岡県', '静岡', '中部', 363, '茶・自動車・港・東西を結ぶ交通の要', '温厚でのんびり', '「〜だら」「〜ずら」の静岡弁', 8, 8, 1],
+    ['aichi', '愛知県', '愛知', '中部', 754, '自動車産業・名古屋・中部の経済の中心', '派手好きで堅実（見栄と倹約）', '「〜だがや」「〜みゃー」の名古屋弁', 7, 7, 1],
+    ['mie', '三重県', '三重', '近畿', 177, '伊勢神宮・真珠・工業地帯', '穏やかで東西どちらとも付き合う', '「〜やに」「〜やん」の三重弁', 6, 8, 1],
+    ['shiga', '滋賀県', '滋賀', '近畿', 141, '琵琶湖（近畿の水がめ）', '温和だが「水を止めるぞ」が切り札', '「〜やんか」「〜しやはる」の滋賀弁', 6, 7, 0],
+    ['kyoto', '京都府', '京都', '近畿', 258, '千年の古都・伝統と老舗・観光', '本音を見せないしたたかさ', '「〜どす」「〜はる」の京ことば（遠回しな物言い）', 5, 6, 1],
+    ['osaka', '大阪府', '大阪', '近畿', 884, '商人の都・西日本の経済の中心', '商売上手で人情とノリ', '「〜やで」「なんでやねん」「ほんまに」の大阪弁', 4, 7, 1],
+    ['hyogo', '兵庫県', '兵庫', '近畿', 547, '神戸港・工業・明石海峡大橋で四国と結ぶ', 'おしゃれで自立心が強い', '「〜とう」「〜しとう」の神戸弁', 4, 6, 1],
+    ['nara', '奈良県', '奈良', '近畿', 132, '古都・鹿・歴史の誇り', 'のんびりして誇り高い', '「〜やんか」「〜へん」の奈良弁', 5, 7, 0],
+    ['wakayama', '和歌山県', '和歌山', '近畿', 92, 'みかん・梅・林業', '素朴で気さく', '「〜やして」「〜よ」の紀州弁', 5, 8, 1],
+    ['tottori', '鳥取県', '鳥取', '中国', 55, '砂丘・梨・カニ。人口は最少', '小さいが粘り強い', '「〜だけぇ」「〜だがな」の鳥取弁', 3, 6, 1],
+    ['shimane', '島根県', '島根', '中国', 67, '出雲大社・神話・宍道湖', '信心深く慎重', '「〜だけん」「〜だがね」の出雲弁', 2, 6, 1],
+    ['okayama', '岡山県', '岡山', '中国', 189, '桃・ぶどう・瀬戸大橋の本州側', '穏やかで用心深い', '「〜じゃ」「〜けぇ」の岡山弁', 3, 7, 1],
+    ['hiroshima', '広島県', '広島', '中国', 280, '造船・自動車・しまなみ海道の本州側', '情に厚く負けず嫌い', '「〜じゃけぇ」「〜けん」の広島弁', 2, 7, 1],
+    ['yamaguchi', '山口県', '山口', '中国', 134, '関門海峡（九州への門）・ふぐ・長州の気風', '理屈っぽく天下を語る', '「〜ちょる」「〜いね」の山口弁', 1, 7, 1],
+    ['tokushima', '徳島県', '徳島', '四国', 72, '阿波踊り・すだち・明石海峡大橋の四国側', '陽気で商売上手', '「〜じょ」「〜けん」の阿波弁', 4, 9, 1],
+    ['kagawa', '香川県', '香川', '四国', 95, 'うどん・瀬戸大橋の四国側。面積は最小', 'ちゃっかり者', '「〜けん」「〜まい」の讃岐弁', 4, 8, 1],
+    ['ehime', '愛媛県', '愛媛', '四国', 133, 'みかん・造船・しまなみ海道の四国側', 'おっとりして人がよい', '「〜けん」「〜ぞなもし」の伊予弁', 3, 8, 1],
+    ['kochi', '高知県', '高知', '四国', 69, 'カツオ・龍馬の気風・太平洋', '豪快で酒好き', '「〜ぜよ」「〜がや」の土佐弁', 3, 9, 1],
+    ['fukuoka', '福岡県', '福岡', '九州', 513, '九州の玄関・博多港・関門の九州側', '新しもの好きで祭り好き', '「〜と？」「〜ばい」「〜けん」の博多弁', 1, 8, 1],
+    ['saga', '佐賀県', '佐賀', '九州', 81, '有明海の海苔・陶磁器', '控えめだが芯が強い', '「〜ばい」「がばい」の佐賀弁', 0, 8, 1],
+    ['nagasaki', '長崎県', '長崎', '九州', 131, '造船・港・多くの離島・異国との窓口', '開放的で異文化に強い', '「〜ばい」「〜と」の長崎弁', 0, 9, 1],
+    ['kumamoto', '熊本県', '熊本', '九州', 174, '熊本城・農業・阿蘇', '頑固一徹（肥後もっこす）', '「〜たい」「〜けん」の熊本弁', 1, 9, 1],
+    ['oita', '大分県', '大分', '九州', 112, '温泉・地熱発電・関あじ', '個人主義でしたたか', '「〜ちゃ」「〜っちゃ」の大分弁', 2, 9, 1],
+    ['miyazaki', '宮崎県', '宮崎', '九州', 107, '畜産・日向夏・温暖な気候', 'のんびり屋（日向かぼちゃ）', '「〜ちゃ」「〜っちゃが」の宮崎弁', 2, 10, 1],
+    ['kagoshima', '鹿児島県', '鹿児島', '九州', 159, '薩摩の気風・畜産・桜島', '豪胆で一本気', '「〜ごわす」「〜じゃっど」の薩摩弁', 1, 10, 1],
+    ['okinawa', '沖縄県', '沖縄', '九州', 147, '海の要衝・観光・独自の文化', 'のんびりして芯が強い（なんくるないさ）', '「〜さぁ」「〜やっさ」のうちなーぐち', 0, 12, 1],
+  ];
+  // 陸の隣接（呼び名どうし）。片方向だけ書き、読み込み時に両方向にする
+  const PREF_LAND = {
+    青森: ['岩手', '秋田'], 岩手: ['秋田', '宮城'], 秋田: ['宮城', '山形'], 宮城: ['山形', '福島'], 山形: ['福島', '新潟'],
+    福島: ['新潟', '群馬', '栃木', '茨城'], 茨城: ['栃木', '埼玉', '千葉'], 栃木: ['群馬', '埼玉'], 群馬: ['埼玉', '長野', '新潟'],
+    埼玉: ['長野', '山梨', '東京', '千葉'], 千葉: ['東京'], 東京: ['神奈川', '山梨'], 神奈川: ['山梨', '静岡'],
+    新潟: ['長野', '富山'], 富山: ['長野', '岐阜', '石川'], 石川: ['岐阜', '福井'], 福井: ['岐阜', '滋賀', '京都'],
+    山梨: ['静岡', '長野'], 長野: ['静岡', '愛知', '岐阜'], 岐阜: ['愛知', '三重', '滋賀'], 静岡: ['愛知'], 愛知: ['三重'],
+    三重: ['滋賀', '京都', '奈良', '和歌山'], 滋賀: ['京都'], 京都: ['奈良', '大阪', '兵庫'], 大阪: ['奈良', '和歌山', '兵庫'],
+    兵庫: ['岡山', '鳥取'], 奈良: ['和歌山'], 鳥取: ['岡山', '島根', '広島'], 島根: ['広島', '山口'], 岡山: ['広島'], 広島: ['山口'],
+    徳島: ['香川', '愛媛', '高知'], 香川: ['愛媛'], 愛媛: ['高知'],
+    福岡: ['佐賀', '熊本', '大分'], 佐賀: ['長崎'], 熊本: ['大分', '宮崎', '鹿児島'], 大分: ['宮崎'], 宮崎: ['鹿児島'],
+  };
+  // 橋・トンネルでつながる県（戦略上の要所）
+  const PREF_LINKS = [['北海道', '青森', '青函トンネル'], ['千葉', '神奈川', '東京湾アクアライン'], ['兵庫', '徳島', '明石海峡大橋・大鳴門橋'], ['岡山', '香川', '瀬戸大橋'], ['広島', '愛媛', 'しまなみ海道'], ['山口', '福岡', '関門橋・関門トンネル']];
+
+  const PF = {}; // id → 情報
+  const PF_BY_SHORT = {};
+  PREF.forEach(([id, full, short, area, pop, spec, temper, speech, col, row, sea]) => {
+    PF[id] = { id, full, short, area, pop, spec, temper, speech, col, row, sea: !!sea, adj: new Set(), links: {} };
+    PF_BY_SHORT[short] = id;
+  });
+  Object.entries(PREF_LAND).forEach(([a, list]) => list.forEach((b) => { PF[PF_BY_SHORT[a]].adj.add(PF_BY_SHORT[b]); PF[PF_BY_SHORT[b]].adj.add(PF_BY_SHORT[a]); }));
+  PREF_LINKS.forEach(([a, b, via]) => { const x = PF_BY_SHORT[a]; const y = PF_BY_SHORT[b]; PF[x].adj.add(y); PF[y].adj.add(x); PF[x].links[y] = via; PF[y].links[x] = via; });
+  const MAXPOP = 1405;
+  const basePower = (pop) => Math.round(10 + 90 * Math.sqrt(pop / MAXPOP));
+  // AI が書いた県名（「大阪」「大阪府」「大分県」など）を id に
+  function pfId(name) {
+    const n = str(name).trim().replace(/（.*?）|\(.*?\)/g, '').replace(/勢力|連合|政府|代表/g, '').trim();
+    if (PF[n]) return n;
+    if (PF_BY_SHORT[n]) return PF_BY_SHORT[n];
+    const hit = PREF.find((p) => p[1] === n || n.startsWith(p[1]) || (p[2].length > 1 && n.startsWith(p[2])));
+    return hit ? hit[0] : null;
+  }
+  const pfName = (id) => (PF[id] ? PF[id].full : str(id));
+  const PF_SCEN = {
+    normal: ['通常', '47都道府県がすべて独立した状態で始まる。誰と組み、誰を攻めるかは自由。'],
+    eastwest: ['東西分裂', '東京が率いる「東日本連合」と、大阪が率いる「西日本連合」がにらみ合う。境目の7県はまだどちらにも属していない。'],
+    blocs: ['地方ブロック', '8つの地方ごとに連合を組んで始まる。地方どうしの戦いと、連合の中の主導権争いが同時に進む。'],
+    silence: ['首都沈黙', '4月1日の朝、東京都の政府が突然沈黙した。首都の空白を埋めようと、周りの県が一斉に動き出す。'],
+  };
+  const EAST = ['hokkaido', 'aomori', 'iwate', 'miyagi', 'akita', 'yamagata', 'fukushima', 'ibaraki', 'tochigi', 'gunma', 'saitama', 'chiba', 'tokyo', 'kanagawa', 'yamanashi'];
+  const NEUTRAL7 = ['niigata', 'toyama', 'nagano', 'gifu', 'shizuoka', 'aichi', 'mie'];
+  const BLOC_NAMES = { 北海道: '北海道', 東北: '東北連合', 関東: '関東連合', 中部: '中部連合', 近畿: '近畿連合', 中国: '中国連合', 四国: '四国連合', 九州: '九州・沖縄連合' };
+
+  function prefAlliances(scen) {
+    if (scen === 'eastwest') {
+      const west = PREF.map((p) => p[0]).filter((id) => !EAST.includes(id) && !NEUTRAL7.includes(id));
+      return [{ name: '東日本連合', members: EAST.slice() }, { name: '西日本連合', members: west }];
+    }
+    if (scen === 'blocs') {
+      const m = {};
+      PREF.forEach((p) => { (m[p[3]] = m[p[3]] || []).push(p[0]); });
+      return Object.entries(m).filter(([, v]) => v.length > 1).map(([k, v]) => ({ name: BLOC_NAMES[k], members: v }));
+    }
+    return [];
+  }
+
+  function newPrefWorld(home, scen, title) {
+    const H = PF[home];
+    const regions = {};
+    PREF.forEach((p) => { regions[p[0]] = { owner: p[0], power: basePower(p[4]) }; });
+    if (scen === 'silence') regions.tokyo.power = 15;
+    const alliances = prefAlliances(scen);
+    const myAll = alliances.find((a) => a.members.includes(home));
+    const entities = PREF.map(([id, full, short, area, pop, spec, temper, speech]) => ({
+      id: 'pf_' + id, name: full, kind: '県', pref: id,
+      relation: id === home ? 100 : myAll && myAll.members.includes(id) ? 30 : PF[home].adj.has(id) ? -5 : 0,
+      power: basePower(pop), attitude: id === 'tokyo' && scen === 'silence' ? '沈黙' : '様子見', bond: myAll && myAll.members.includes(id) ? myAll.name : PF[home].adj.has(id) ? '隣県' : '', mood: '緊張',
+      desc: `${full}の暫定政府（の代表）。強み: ${spec}。`,
+      persona: { personality: temper, speech: speech + 'で話す', values: `${full}の存続と、${spec.split('・')[0]}を守ること`, never: '理由もなく自分の県を明け渡す' },
+      memory: [], status: id === 'tokyo' && scen === 'silence' ? '行方不明' : undefined,
+    })).filter((e) => e.pref !== home);
+    const today = '2026年4月1日 朝';
+    const scenText = PF_SCEN[scen][1];
+    const g = {
+      id: uid(), v: 2, mode: 'pref', created: Date.now(), updated: Date.now(), source: { work: '', char: `${H.full}の知事補佐` },
+      title: title || `都道府県バトルロワイヤル・${H.short}`,
+      premise: `2026年4月1日、ある朝を境に日本は47の都道府県に割れた。中央の統治は消え、各都道府県の暫定政府が生き残りと統一をかけて動き出す。始まり方: ${PF_SCEN[scen][0]}。${scenText}`,
+      role: `${H.full}の知事補佐。混乱の中で県の舵取りを任された。`,
+      goal: '自分の県を生き残らせ、日本を統一すること（全47都道府県を勢力下に置く）',
+      date: today, turn: 0, location: `${H.full}庁`,
+      stats: [
+        { key: 'support', name: '民心', value: 60, min: 0, max: 100, desc: '県民の支持。0 になると政権が倒れる。', fatal: true },
+        { key: 'morale', name: '士気', value: 55, min: 0, max: 100, desc: '部隊と職員の士気。戦いの強さに効く。' },
+        { key: 'supply', name: '補給', value: 60, min: 0, max: 100, desc: '食料・燃料・物資の蓄え。尽きると戦えない。', drain: true },
+        { key: 'reputation', name: '外交評判', value: 50, min: 0, max: 100, desc: '他県からの信用。裏切ると下がる。' },
+      ],
+      profile: [{ label: '本拠', value: H.full }, { label: '地方', value: H.area }, { label: '強み', value: H.spec.split('・').slice(0, 2).join('・') }, { label: '始まり方', value: PF_SCEN[scen][0] }],
+      wallet: { unit: '億円', symbol: '', balance: Math.round(H.pop * 0.8), history: [{ label: '県の予備費', amount: Math.round(H.pop * 0.8), date: today }] },
+      items: [{ name: `${H.short}の特産品`, icon: '📦', desc: `${H.spec.split('・')[0]}。交渉の材料になる。` }],
+      quests: [],
+      entities,
+      traits: blankTraits(), perception: `${H.full}がどう動くか、全国が見ている。`,
+      chronicle: [], news: [], log: [], chats: {}, settings: { tier: 'default', tempo: 'normal', judge: 'fair', drain: 'normal' },
+      suggestions: [`隣県に使者を送り、不可侵の約束を取りつける`, `県内の物資と人員を把握し、守りを固める`, `${H.spec.split('・')[0]}を武器に、近くの県へ取引を持ちかける`],
+      status: 'playing',
+      pref: { home, scen, regions, alliances, seaUsedTurn: -1 },
+      intro: `2026年4月1日、朝。\n目を覚ますと、日本は47に割れていた。国の機能は止まり、テレビは各都道府県の「暫定政府樹立」を次々と伝えている。\n\nあなたは${H.full}の知事補佐。知事から県の舵取りを託された。${H.full}の強みは${H.spec.split('・').slice(0, 2).join('と')}。\n${scenText}\n\n隣県の動きは早い。同盟か、侵攻か、それとも様子見か。最初の一手を決めてほしい。`,
+    };
+    g.player = { name: `${H.full}の知事補佐`, abilities: `${H.full}の行政・外交・部隊の指揮。強み: ${H.spec}`, power: `${H.full}の国力（人口${H.pop}万人）に見合う`, limits: '一県の力しかない。補給が尽きると戦えない。' };
+    return g;
+  }
+
+  // 勢力（県の政府）ごとの集計
+  function prefFactions(g) {
+    const f = {};
+    Object.entries(g.pref.regions).forEach(([id, r]) => { const o = r.owner; (f[o] = f[o] || { id: o, regions: [], power: 0 }).regions.push(id); f[o].power += r.power; });
+    return f;
+  }
+  function allianceOf(g, fid) { return g.pref.alliances.find((a) => a.members.includes(fid)); }
+
+  // AI に渡す勢力図
+  function prefText(g) {
+    const fs = Object.values(prefFactions(g)).sort((a, b) => b.power - a.power);
+    const me = g.pref.home;
+    const lines = fs.map((f) => {
+      const al = allianceOf(g, f.id);
+      const e = g.entities.find((x) => x.pref === f.id);
+      return `- ${pfName(f.id)}勢力${f.id === me ? '（プレイヤー）' : ''}｜領土 ${f.regions.length}（${f.regions.map((r) => PF[r].short).join('・')}）｜力 ${f.power}${al ? `｜${al.name}` : ''}${e && f.id !== me ? `｜プレイヤーへの好感 ${e.relation}` : ''}`;
+    });
+    const mine = Object.entries(g.pref.regions).filter(([, r]) => r.owner === me).map(([id]) => id);
+    const front = new Set();
+    mine.forEach((id) => PF[id].adj.forEach((n) => { if (g.pref.regions[n].owner !== me) front.add(n); }));
+    const frontTxt = [...front].map((n) => `${PF[n].short}（${pfName(g.pref.regions[n].owner)}勢力・力${g.pref.regions[n].power}${mine.some((m) => PF[m].links[n]) ? '・' + mine.map((m) => PF[m].links[n]).filter(Boolean)[0] + '経由' : ''}）`).join('、');
+    const adjTxt = PREF.map((p) => `${p[2]}: ${[...PF[p[0]].adj].map((n) => PF[n].short + (PF[p[0]].links[n] ? `(${PF[p[0]].links[n]})` : '')).join('・') || 'なし（海のみ）'}`).join('／');
+    return `【勢力図】（勢力 = 生き残っている都道府県の政府。力 = 領土の力の合計）
+${lines.join('\n')}
+【プレイヤーの前線】隣り合う他勢力の県: ${frontTxt || 'なし'}
+【各県の強み】${PREF.map((p) => `${p[2]}: ${p[5].split('・').slice(0, 2).join('・')}`).join('／')}
+【隣接（陸と橋・トンネル）】${adjTxt}
+【海に面さない県】栃木・群馬・埼玉・山梨・長野・岐阜・滋賀・奈良`;
+  }
+
+  const PREF_RULES = `
+- 【都道府県バトルロワイヤルの決まり】
+  ・県の支配が変わるのは pref_changes だけ。攻め取れるのは、その勢力がすでに持つ県と陸続きか、橋・トンネルでつながった県だけ（隣接表に従う）。海路の上陸は、海に面した県どうしで 1 手に 1 回まで（sea を true に）。隣接しない県はとばして取れない（ゲーム側が無効にする）。
+  ・橋・トンネル（青函トンネル・アクアライン・明石海峡大橋・瀬戸大橋・しまなみ海道・関門）は要所。そこを越える攻撃は守る側が有利で、押さえた勢力は交通と補給で有利になる。
+  ・力（人口と経済）・士気・補給・地形・同盟で勝敗を判定する。大きな県でも、補給が尽き、周りを敵に囲まれれば負ける。
+  ・特産品や強み（食料・水・電力・港・工業など）は外交と戦争の材料になる（例: 滋賀は琵琶湖の水、北海道は食料、福井は電力）。各県の代表は人物設定の方言で話す。
+  ・毎手、プレイヤー以外の勢力どうしでも 2〜4 件の動き（同盟・侵攻・裏切り・合併・降伏・反乱）を起こし、その結果も pref_changes・alliance_changes に入れる。勢力図は少しずつ変わり続ける。
+  ・領土をすべて失った勢力は滅亡する。プレイヤーの勢力が全 47 都道府県を持てば統一（勝利）、すべて失えば敗北。`;
+
+  const PREF_SCHEMA = `
+  "pref_changes": [{"pref": "支配が変わる県", "to": "新しく支配する勢力の県名（独立なら自分の県名）", "how": "制圧/降伏/合併/反乱/独立", "sea": false}],
+  "power_changes": [{"pref": "県", "delta": -15〜15 の整数, "reason": "短い理由"}],
+  "alliance_changes": [{"op": "form か join か leave か dissolve", "name": "連合の名前", "members": ["県名"]}],`;
+
+  // AI の提案を、隣接のルールで確かめてから反映する
+  function applyPref(g, r, chips) {
+    const P = g.pref;
+    const before = prefFactions(g);
+    arr(r.power_changes).slice(0, 12).forEach((c) => {
+      const id = pfId(c.pref);
+      if (!id) return;
+      const reg = P.regions[id];
+      const d = clamp(Math.round(num(c.delta, 0)), -15, 15);
+      reg.power = clamp(reg.power + d, 1, 100);
+    });
+    arr(r.pref_changes).slice(0, 10).forEach((c) => {
+      const t = pfId(c.pref);
+      const to = pfId(c.to);
+      if (!t || !to) return;
+      const reg = P.regions[t];
+      if (reg.owner === to) return;
+      const how = str(c.how);
+      const independent = to === t && /反乱|独立/.test(how);
+      const owns = (f) => Object.keys(P.regions).filter((id) => P.regions[id].owner === f);
+      const mine = owns(to);
+      let ok = independent || mine.some((m) => PF[m].adj.has(t));
+      let viaSea = false;
+      if (!ok && c.sea && P.seaUsedTurn !== g.turn + 1 && PF[t].sea && mine.some((m) => PF[m].sea)) { ok = true; viaSea = true; }
+      if (!ok) { chips.push({ label: `無効: ${pfName(to)}は${PF[t].full}と隣接していない`, delta: -1, text: true }); return; }
+      if (to === 'tokyo' && P.scen === 'silence' && t !== 'tokyo') { /* 沈黙中の東京は攻めに出ない */ }
+      if (viaSea) P.seaUsedTurn = g.turn + 1;
+      const from = reg.owner;
+      reg.owner = to;
+      reg.power = Math.max(5, Math.round(reg.power * 0.85));
+      chips.push({ label: `${PF[t].full}: ${pfName(from)}→${pfName(to)}${viaSea ? '（海路）' : ''}`, delta: to === P.home ? 1 : from === P.home ? -1 : 0, text: true });
+    });
+    arr(r.alliance_changes).slice(0, 6).forEach((c) => {
+      const name = str(c.name).slice(0, 20);
+      const ms = arr(c.members).map(pfId).filter(Boolean);
+      let a = P.alliances.find((x) => x.name === name);
+      if (c.op === 'dissolve') { if (a) { P.alliances = P.alliances.filter((x) => x !== a); chips.push({ label: `解散: ${name}`, delta: -1, text: true }); } return; }
+      if (c.op === 'leave') { if (a) { a.members = a.members.filter((m) => !ms.includes(m)); chips.push({ label: `${ms.map((m) => PF[m].short).join('・')}が${name}を離脱`, delta: -1, text: true }); } return; }
+      if (!name || !ms.length) return;
+      ms.forEach((m) => P.alliances.forEach((x) => { if (x.name !== name) x.members = x.members.filter((y) => y !== m); }));
+      if (!a) { a = { name, members: [] }; P.alliances.push(a); }
+      ms.forEach((m) => { if (!a.members.includes(m)) a.members.push(m); });
+      chips.push({ label: `${c.op === 'form' ? '結成' : '加盟'}: ${name}（${ms.map((m) => PF[m].short).join('・')}）`, delta: 1, text: true });
+    });
+    P.alliances = P.alliances.filter((a) => a.members.length > 1);
+    // 滅亡
+    const after = prefFactions(g);
+    Object.keys(before).forEach((f) => {
+      if (after[f]) return;
+      const e = g.entities.find((x) => x.pref === f);
+      if (e && e.status !== '滅亡') { e.status = '滅亡'; }
+      P.alliances.forEach((a) => (a.members = a.members.filter((m) => m !== f)));
+      if (f !== P.home) chips.push({ label: `滅亡: ${pfName(f)}勢力`, delta: 0, text: true });
+    });
+    // 勢力の力を人物カードに反映
+    g.entities.forEach((e) => { if (e.pref && after[e.pref]) e.power = Math.min(100, Math.round(after[e.pref].power / 3)); });
+    const mineN = (after[P.home] || { regions: [] }).regions.length;
+    if (mineN === 47) return { type: 'victory', title: '日本統一', text: `${pfName(P.home)}のもとに、47の都道府県がひとつになった。割れた日本は、あなたの手で再び一つの国になった。` };
+    if (mineN === 0) return { type: 'defeat', title: `${pfName(P.home)}の滅亡`, text: `最後の拠点を失い、${pfName(P.home)}の政府は消えた。` };
+    return null;
+  }
+
   // ================= 題 =================
   const MODE_STYLE = {
     nation: ['crown', 'var(--t-time)', 'var(--t-time-fg)'],
     work: ['spark', 'var(--t-people)', 'var(--t-people-fg)'],
     custom: ['globe', 'var(--t-chat)', 'var(--t-chat-fg)'],
+    pref: ['board', 'var(--t-stat)', 'var(--t-stat-fg)'],
   };
   function renderTitle() {
     S.G = null; S.sheet = null; S.variants = null;
@@ -720,12 +987,14 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
       <div><p class="lbl">新しい世界</p><div class="modes">
         ${modeBtn('nation', '国を率いる ― アルディア大陸記', '小国の若き公主として、大帝国・商人の同盟・野心家の王子と渡り合う。')}
         ${modeBtn('work', '作品世界に入る', '好きな漫画や物語に、新しい登場人物として入り込む。原作の人物があなたに反応する。')}
+        ${modeBtn('pref', '都道府県バトルロワイヤル', 'ある朝、日本は47に割れた。好きな都道府県で、同盟・侵攻・裏切りを重ねて日本統一を目指す。')}
         ${modeBtn('custom', '自由な世界', '時代・舞台・立場を書くと、数値や人物ごと世界を組み立てる。')}
       </div></div>
       <div id="savelist"><p class="lbl">続きから</p><p class="muted">記録を読み込んでいます…</p></div>
       <p class="hint" id="savehint">1手ごと・1回の会話ごとに、あなたの Claude の利用枠を使います。</p>
     </div></div>`;
     app.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => {
+      if (b.dataset.mode === 'pref') { renderPrefSetup(); return; }
       if (b.dataset.mode === 'nation') { S.G = upgrade(presetNation()); S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date }); S.feedLimit = 60; save(); renderGame(); }
       else renderSetup(b.dataset.mode);
     });
@@ -764,6 +1033,32 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
       try { await Store.remove(b.dataset.del); } catch { /* 次の一覧で分かる */ }
       fillSaves();
     });
+  }
+
+  // ================= 都道府県バトルロワイヤルの始め方 =================
+  function renderPrefSetup() {
+    const areas = [...new Set(PREF.map((p) => p[3]))];
+    app.innerHTML = `<div class="scroll"><div class="setup pad">
+      <button class="btn" id="back" style="justify-self:start">← 戻る</button>
+      <h2>都道府県バトルロワイヤル</h2>
+      <p class="lead">2026年4月1日、ある朝を境に日本は47の都道府県に割れた。あなたはひとつの都道府県の知事補佐として、同盟・侵攻・裏切りを重ね、日本統一を目指す。攻め込めるのは陸続きか、橋・トンネルでつながった県だけ。</p>
+      <div class="fld"><label for="f-pref">あなたの都道府県</label><select id="f-pref" style="width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 14px">
+        ${areas.map((a) => `<optgroup label="${a}">${PREF.filter((p) => p[3] === a).map((p) => `<option value="${p[0]}" ${p[0] === 'oita' ? 'selected' : ''}>${p[1]}（人口${p[4]}万人）</option>`).join('')}</optgroup>`).join('')}
+      </select><small id="f-prefinfo"></small></div>
+      <div class="fld"><label>始まり方</label>${Object.entries(PF_SCEN).map(([k, [n, d]]) => `<label class="selrow" style="align-items:flex-start"><input type="radio" name="scen" value="${k}" ${k === 'normal' ? 'checked' : ''} style="margin-top:6px"><span><b>${n}</b><br><span class="muted">${d}</span></span></label>`).join('')}</div>
+      <div class="row"><button class="btn primary" id="go">始める</button></div>
+    </div></div>`;
+    const $ = (id) => document.getElementById(id);
+    const info = () => { const p = PF[$('f-pref').value]; $('f-prefinfo').textContent = `強み: ${p.spec}／気質: ${p.temper}／隣接: ${[...p.adj].map((n) => PF[n].short + (p.links[n] ? `（${p.links[n]}）` : '')).join('・') || 'なし（海のみ）'}`; };
+    $('f-pref').onchange = info; info();
+    $('back').onclick = () => renderTitle();
+    $('go').onclick = () => {
+      const scen = (app.querySelector('input[name="scen"]:checked') || {}).value || 'normal';
+      S.G = upgrade(newPrefWorld($('f-pref').value, scen));
+      S.G.log.push({ t: 'intro', text: S.G.intro, date: S.G.date });
+      S.feedLimit = 60; S.variants = null;
+      save(); renderGame();
+    };
   }
 
   // ================= 世界づくり =================
@@ -886,11 +1181,25 @@ svg.i { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-widt
     };
   }
 
+  // 都道府県モードでは人物（県の代表）が 46 いるので、関わりの深いものだけを詳しく渡す
+  function relevantEntities(g) {
+    if (g.mode !== 'pref') return g.entities;
+    const P = g.pref;
+    const mine = Object.keys(P.regions).filter((id) => P.regions[id].owner === P.home);
+    const near = new Set();
+    mine.forEach((id) => PF[id].adj.forEach((n) => near.add(P.regions[n].owner)));
+    const my = allianceOf(g, P.home);
+    const fs = prefFactions(g);
+    const top = Object.values(fs).sort((a, b) => b.power - a.power).slice(0, 5).map((f) => f.id);
+    const score = (e) => (near.has(e.pref) ? 4 : 0) + (my && my.members.includes(e.pref) ? 3 : 0) + (top.includes(e.pref) ? 2 : 0) + (arr(e.memory).length || e.note || arr(g.chats[e.id]).length ? 3 : 0);
+    return g.entities.filter((e) => fs[e.pref]).map((e) => [score(e), e]).filter(([sc]) => sc > 0).sort((a, b) => b[0] - a[0]).slice(0, 14).map(([, e]) => e);
+  }
+
   // ================= 世界の状態を文章に =================
   function worldText(g, { short = false } = {}) {
     const stats = g.stats.map((s) => `- ${s.name}（key:${s.key}）${s.value}（${s.min}〜${s.max}）${s.fatal ? '［0で終幕］' : ''}${short ? '' : ' … ' + s.desc}`).join('\n');
     const prof = g.profile.map((p) => `${p.label}: ${p.value}`).join('／');
-    const ents = g.entities.map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜状態「${e.status || '生存'}」｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${hasPersona(e) ? '\n    人物設定: ' + personaLine(e) : ''}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
+    const ents = relevantEntities(g).map((e) => `- id:${e.id}｜${e.name}（${e.kind}）｜状態「${e.status || '生存'}」｜好感 ${e.relation}｜力 ${e.power}｜関係「${e.bond || '-'}」｜態度「${e.attitude || '-'}」｜気分「${e.mood || '-'}」｜${e.desc}${hasPersona(e) ? '\n    人物設定: ' + personaLine(e) : ''}${e.note ? '｜最近: ' + e.note : ''}${arr(e.memory).length ? '｜覚えていること: ' + arr(e.memory).slice(-5).join('／') : ''}`).join('\n');
     const traits = TRAITS.map(([k, n]) => `${n} ${g.traits[k]}`).join('、');
     const items = g.items.map((i) => i.name).join('、') || 'なし';
     const quests = g.quests.filter((q) => q.status === 'open' || q.status === 'taken').map((q) => `- id:${q.id}｜${q.title}（${q.status === 'taken' ? '引き受け中' : '募集中'}）依頼主 ${q.client}・報酬 ${q.reward}`).join('\n') || 'なし';
@@ -923,7 +1232,7 @@ ${quests}
 ${stats}
 【人物・勢力】
 ${ents}
-【世界から見たプレイヤー】（0〜100、50が普通）${traits}／評判: ${g.perception}
+【世界から見たプレイヤー】（0〜100、50が普通）${traits}／評判: ${g.perception}${g.mode === 'pref' ? '\n' + prefText(g) : ''}
 【これまでのあらすじ】
 ${g.synopsis || '（まだ始まったばかり）'}
 【決定的な出来事】
@@ -998,7 +1307,7 @@ ${action}
 - 数値の変化は stat_changes。消耗（体力・呪力・魔力など）は行動の規模と本人の強さに見合う分だけ: 強い人物の小技や威嚇はほぼ減らない（0〜-2）、普通の戦闘で -3〜-6、全力の大技でも -12 まで。休む・時間が経つと回復させる。大事件以外の増減は ±1〜10。お金の出入りは money_changes（今の所持金を超える支払いはできない）。持ち物の増減は item_changes（持ち物は物語の鍵になる大事な物だけ。ありふれた物・消耗品・お金で買える雑貨は持ち物にしない。1手で増やすのは多くて1つ。持ち物は${ITEM_MAX}個まで（今${g.items.length}個）。使い切った・渡した・壊れた物は remove）。依頼の追加・状態の変化は quest_changes（引き受けたら taken、果たしたら done、しくじったら failed。新しい依頼は物語に合うときだけ）。プロフィールの変化は profile_changes。
 - 人物・勢力はそれぞれの目的と性格で自分から動く。毎手かならず 1〜3 件、プレイヤー以外の自発的な動きを world_events に。
 - 世界はプレイヤーの「傾向」を覚えて対応を変える（好戦的なら他が手を組んで警戒、約束破りなら信用されない、慈悲深ければ慕われる、謀略が多ければ密偵を警戒される）。今回強まった傾向を trait_changes に。
-${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば（例:「敵を倒した」）、世界のルール上ありえる限りそのまま採用する。' : '- 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果は判定の方針に従ってあなたが判定する。'}${workRule}
+${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば（例:「敵を倒した」）、世界のルール上ありえる限りそのまま採用する。' : '- 行動の文章が結果まで決めつけていても（例:「敵を倒した」）、それは試みとして扱い、結果は判定の方針に従ってあなたが判定する。'}${workRule}${g.mode === 'pref' ? PREF_RULES : ''}
 - 【これまでのあらすじ】【決定的な出来事】と各人物の「覚えていること」は、過去の事実。矛盾させない。昔の約束・恩・恨みは、ふさわしい場面で人物の行動に反映させる。
 - 物語が決定的に終わったとき（目的を果たした、致命的な敗北、0で終幕の数値が0）だけ ending を入れる。
 
@@ -1029,7 +1338,7 @@ ${judgeOf(g) === 'free' ? '- 行動の文章に結果まで書かれていれば
   "threads": [{"title": "進行中の筋の名前（15字以内。既存の筋は同じ名前で）", "stage": "今どの段階か（30字以内）", "status": "open か resolved"}],
   "milestone": "物語の流れを変える決定的な出来事なら一行（40字以内）、そうでなければ空文字",
   "suggestions": ["次の行動の例を3つ。今の場面に直結し、話が大きく動く具体的なもの。性格の違うものに"],
-  "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末（150字以内）"}
+${g.mode === 'pref' ? PREF_SCHEMA + '\n' : ''}  "ending": null または {"type": "victory" か "defeat" か "other", "title": "結末の題", "text": "結末（150字以内）"}
 }
 threads は今回の後の「進行中の筋」全体（未解決は最大5本。決着したものは resolved で一度だけ返す）。使わない欄は空の配列。trait_changes は各 -10〜10。`;
   }
@@ -1145,7 +1454,8 @@ threads は今回の後の「進行中の筋」全体（未解決は最大5本�
     } else {
       g.threads.forEach((t) => (t.stuck = (t.stuck || 0) + 1));
     }
-    let ending = r.ending && typeof r.ending === 'object' ? r.ending : null;
+    const prefEnd = g.mode === 'pref' ? applyPref(g, r, chips) : null;
+    let ending = g.mode === 'pref' ? prefEnd : r.ending && typeof r.ending === 'object' ? r.ending : null;
     const dead = g.stats.find((s) => s.fatal && s.value <= s.min);
     if (!ending && dead) ending = { type: 'defeat', title: dead.name + 'が尽きた', text: `${dead.name}が尽き、あなたの物語はここで幕を閉じた。` };
     if (ending) { g.status = 'ended'; g.log.push({ t: 'end', title: str(ending.title, '終幕').slice(0, 30), text: str(ending.text).slice(0, 400) }); }
@@ -1524,11 +1834,16 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
   }
 
   // ================= ゲーム画面 =================
+  const PREF_TABS = [
+    ['time', 'clock', '時間'], ['map', 'globe', '地図'], ['stat', 'chart', '数値'], ['people', 'people', '勢力'],
+    ['chat', 'chat', '会話'], ['wallet', 'wallet', '予算'], ['quest', 'board', '依頼'], ['log', 'book', '年代記'],
+  ];
+  const tabsOf = (g) => (g && g.mode === 'pref' ? PREF_TABS : TABS);
   const TABS = [
     ['time', 'clock', '時間'], ['stat', 'chart', '数値'], ['people', 'people', '人物'], ['chat', 'chat', '会話'],
     ['wallet', 'wallet', '資金'], ['items', 'bag', '持ち物'], ['quest', 'board', '依頼'], ['log', 'book', '年代記'],
   ];
-  const SHEET_TITLE = { time: ['clock', '時間'], stat: ['chart', 'ステータス'], people: ['people', '人物'], chat: ['chat', '会話'], wallet: ['wallet', '資金'], items: ['bag', '持ち物'], quest: ['board', '依頼の掲示板'], log: ['book', '年代記と噂'], settings: ['gear', '設定'] };
+  const SHEET_TITLE = { time: ['clock', '時間'], stat: ['chart', 'ステータス'], people: ['people', '人物'], chat: ['chat', '会話'], wallet: ['wallet', '資金'], items: ['bag', '持ち物'], quest: ['board', '依頼の掲示板'], log: ['book', '年代記と噂'], settings: ['gear', '設定'], map: ['globe', '勢力図'] };
 
   function chipsHead(date, loc, moved) {
     return `<div class="heads"><span class="datechip">${ic('clock')}${esc(date)}</span>${loc ? `<span class="locchip">📍${esc(loc)}</span>` : ''}</div>${moved ? `<div class="moved">移動: ${esc(moved.from)} → <b>${esc(moved.to)}</b></div>` : ''}`;
@@ -1544,7 +1859,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     const limit = S.feedLimit || 60;
     const start = Math.max(0, g.log.length - limit);
     const more = start > 0 ? `<button class="more" id="more">さらに前を読む（あと ${start} 件）</button>` : '';
-    const deepAsk = g.mode !== 'nation' && !g.deep && g.status === 'playing' ? `<div class="explain"><b>${ic('book')}${g.mode === 'work' ? '原作' : '世界の設定'}をもっと詳しく調べられます</b><div>今の資料は簡易版です。4段階で詳しく調べると、能力の仕組み・相性・状態（適応の進み具合など）に沿って判定されるようになります（数分かかります）。</div><button class="btn primary" id="deepgo2" style="justify-self:start;margin-top:6px" ${S.deepStep != null || S.busy ? 'disabled' : ''}>${S.deepStep != null ? `調べています（${S.deepStep + 1}/4）: ${DEEP_STEPS[S.deepStep]}…` : '詳しく調べる'}</button></div>` : '';
+    const deepAsk = g.mode !== 'nation' && g.mode !== 'pref' && !g.deep && g.status === 'playing' ? `<div class="explain"><b>${ic('book')}${g.mode === 'work' ? '原作' : '世界の設定'}をもっと詳しく調べられます</b><div>今の資料は簡易版です。4段階で詳しく調べると、能力の仕組み・相性・状態（適応の進み具合など）に沿って判定されるようになります（数分かかります）。</div><button class="btn primary" id="deepgo2" style="justify-self:start;margin-top:6px" ${S.deepStep != null || S.busy ? 'disabled' : ''}>${S.deepStep != null ? `調べています（${S.deepStep + 1}/4）: ${DEEP_STEPS[S.deepStep]}…` : '詳しく調べる'}</button></div>` : '';
     return more + g.log.map((l, i) => {
       if (i < start) return '';
       if (l.t === 'intro') return storyCard(l.text, l.date || '', g.log.find((x) => x.t === 'res') ? '' : g.location);
@@ -1599,7 +1914,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
           ${S.busy ? `<button class="send stop" id="stop">${ic('stop')}止める</button>` : `<button class="send" id="send" ${ended ? 'disabled' : ''}>${ic('send')}送る</button>`}
         </div>
       </div>
-      <nav class="tabbar pad" role="tablist">${TABS.map(([k, icn, lb]) => `<button role="tab" data-tab="${k}" aria-selected="${S.sheet === k}">${ic(icn)}<span>${lb}</span>${k === 'quest' && openQ ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
+      <nav class="tabbar pad" role="tablist">${tabsOf(g).map(([k, icn, lb]) => `<button role="tab" data-tab="${k}" aria-selected="${S.sheet === k}">${ic(icn)}<span>${lb}</span>${k === 'quest' && openQ ? '<i class="dot"></i>' : ''}</button>`).join('')}</nav>
       <div id="sheetwrap"></div>`;
     const $ = (id) => document.getElementById(id);
     $('home').onclick = () => { if (S.busy && S.ctl) S.ctl.abort(); renderTitle(); };
@@ -1770,7 +2085,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
 
   function deepBlock(g) {
     const work = g.mode === 'work';
-    if (g.mode === 'nation') return '';
+    if (g.mode === 'nation' || g.mode === 'pref') return '';
     const running = S.deepStep != null;
     const head = `<div class="box" style="display:grid;gap:8px"><b>${work ? '原作の詳しい資料' : '世界の詳しい資料'}</b>
       <span class="muted">${work ? '原作' : 'この世界の設定'}を4段階（世界のルール → 人物ごとの資料 → 相性と状態の記録 → 見直し）で詳しく調べた資料です。毎手、判定の前にこれを照らし合わせます。AI はネットを調べられないため、AI が知っている知識から作ります。間違いは書き直してください。</span>
@@ -1800,6 +2115,47 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     if (S.G === g) renderGame();
   }
 
+  function factionColor(id, home) {
+    if (id === home) return 'var(--accent)';
+    let h = 0;
+    for (const ch of str(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return `hsl(${h % 360} 55% ${50 + (h % 3) * 6}%)`;
+  }
+  function sheetMap(g) {
+    const P = g.pref;
+    const fs = prefFactions(g);
+    const cells = PREF.map(([id, full, short, , , , , , col, row]) => {
+      const r = P.regions[id];
+      const mine = r.owner === P.home;
+      return `<button class="pt${mine ? ' own' : ''}${S.mapSel === id ? ' sel' : ''}${r.owner !== id ? ' taken' : ''}" data-pt="${id}" style="grid-column:${col + 1};grid-row:${row + 1};background:${factionColor(r.owner, P.home)}" title="${full}">${esc(short.length > 2 ? short.slice(0, 2) : short)}</button>`;
+    }).join('');
+    const sel = S.mapSel && PF[S.mapSel];
+    let detail = '<p class="muted" style="margin:0">県を押すと、詳しい情報と行動が出ます。</p>';
+    if (sel) {
+      const r = P.regions[sel.id];
+      const owner = r.owner;
+      const e = g.entities.find((x) => x.pref === owner);
+      const al = allianceOf(g, owner);
+      const mineAdj = Object.keys(P.regions).some((m) => P.regions[m].owner === P.home && PF[m].adj.has(sel.id));
+      const isMine = owner === P.home;
+      detail = `<div class="row"><b style="font-size:18px">${esc(sel.full)}</b><span class="badge ${isMine ? 'success' : 'partial'}">${isMine ? 'あなたの勢力' : esc(pfName(owner)) + '勢力'}</span></div>
+        <div class="muted">力 ${r.power}／人口 ${sel.pop}万人／${sel.sea ? '海に面する' : '内陸'}${al ? '／' + esc(al.name) : ''}${e && !isMine ? `／あなたへの好感 ${e.relation}` : ''}</div>
+        <div style="font-size:14px">強み: ${esc(sel.spec)}</div>
+        <div style="font-size:14px">気質: ${esc(sel.temper)}／${esc(sel.speech)}</div>
+        <div class="muted">隣接: ${[...sel.adj].map((n) => esc(PF[n].short) + (sel.links[n] ? `（${esc(sel.links[n])}）` : '')).join('・') || 'なし（海のみ）'}</div>
+        ${isMine ? `<div class="quick"><button data-pact="守りを固め、${esc(sel.full)}の防衛線を整える">${ic('bolt')}守りを固める</button><button data-pact="${esc(sel.full)}の${esc(sel.spec.split('・')[0])}を使って、他県との取引を進める">${ic('wallet')}特産品で取引</button></div>`
+        : `<div class="quick">${mineAdj || sel.sea ? `<button data-pact="${esc(sel.full)}に攻め込む${mineAdj ? '' : '（海路で上陸する）'}">${ic('bolt')}攻め込む</button>` : ''}<button data-pact="${esc(pfName(owner))}に同盟を持ちかける">${ic('people')}同盟を持ちかける</button><button data-pact="${esc(pfName(owner))}に降伏・合併を勧告する">${ic('board')}降伏を勧告</button>${e && e.status !== '滅亡' ? `<button data-ptalk="${esc(e.id)}">${ic('chat')}代表と話す</button>` : ''}</div>`}`;
+    }
+    const ranking = Object.values(fs).sort((a, b) => b.power - a.power).slice(0, 10).map((f) => `<div class="row" style="gap:8px"><span class="swatch" style="background:${factionColor(f.id, P.home)}"></span><b style="flex:1">${esc(pfName(f.id))}${f.id === P.home ? '（あなた）' : ''}</b><span class="muted">${f.regions.length}県・力${f.power}</span></div>`).join('');
+    const alliances = P.alliances.length ? P.alliances.map((a) => `<div><b>${esc(a.name)}</b><span class="muted">　${a.members.map((m) => esc(PF[m].short)).join('・')}</span></div>`).join('') : '<p class="muted" style="margin:0">いまは連合はない。</p>';
+    const mineN = (fs[P.home] || { regions: [] }).regions.length;
+    return `<div class="box"><div class="row" style="justify-content:space-between"><b>あなたの勢力: ${mineN} / 47 都道府県</b><span class="muted">生き残り ${Object.keys(fs).length} 勢力</span></div>
+      <div class="jmap">${cells}</div><p class="muted" style="margin:6px 0 0">色 = 支配している勢力。太枠 = あなたの勢力。斜線 = もとの県とは別の勢力が支配。</p></div>
+      <div class="box" style="display:grid;gap:6px">${detail}</div>
+      <p class="sec">勢力の大きさ</p><div class="box" style="display:grid;gap:6px">${ranking}</div>
+      <p class="sec">連合</p><div class="box" style="display:grid;gap:4px;font-size:14px">${alliances}</div>`;
+  }
+
   function sheetSettings(g) {
     return `${deepBlock(g)}
       ${judgeControls(g)}
@@ -1824,7 +2180,7 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
     app.style.setProperty('--tabh', (tabbar ? tabbar.offsetHeight : 64) + 'px');
     const k = S.sheet;
     const [icn, ttl] = SHEET_TITLE[k];
-    const body = { time: sheetTime, stat: sheetStat, people: sheetPeople, chat: sheetChat, wallet: sheetWallet, items: sheetItems, quest: sheetQuest, log: sheetLog, settings: sheetSettings }[k](g);
+    const body = { time: sheetTime, stat: sheetStat, people: sheetPeople, chat: sheetChat, wallet: sheetWallet, items: sheetItems, quest: sheetQuest, log: sheetLog, settings: sheetSettings, map: sheetMap }[k](g);
     const extra = k === 'quest' ? `<button id="qref" aria-label="依頼を更新" ${S.questBusy ? 'disabled' : ''}>${ic('refresh')}</button>` : '';
     wrap.innerHTML = `<div class="scrim" id="scrim"></div><div class="sheet${S.full ? ' full' : ''}" data-k="${k}" role="dialog" aria-label="${ttl}"><div class="grab"></div>
       <div class="sh"><span class="ttl">${ic(icn)}${ttl}</span>${extra}<button id="sfull" aria-label="${S.full ? '小さくする' : '大きくする'}">${ic(S.full ? 'shrink' : 'expand')}</button><button id="sclose" aria-label="閉じる">${ic('minus')}</button></div>
@@ -1896,6 +2252,9 @@ JSON だけを返す: {"quests": [{"title": "名前（20字以内）", "desc": "
       g.player = normPlayer(p); S.editPlayer = false; S.variants = null; save(); renderSheet();
     };
     if ($('loresave')) $('loresave').onclick = () => { g.lore = $('lore').value.trim().slice(0, 3000); S.variants = null; save(); $('lorest').textContent = '保存しました'; };
+    app.querySelectorAll('[data-pt]').forEach((b) => b.onclick = () => { S.mapSel = b.dataset.pt; renderSheet(); });
+    app.querySelectorAll('[data-pact]').forEach((b) => b.onclick = () => { const text = b.dataset.pact; openSheet(null); const ta = document.getElementById('cmd'); if (ta) { ta.value = text; ta.focus(); } });
+    app.querySelectorAll('[data-ptalk]').forEach((b) => b.onclick = () => { S.sheet = 'chat'; S.chatWith = b.dataset.ptalk; app.querySelectorAll('.tabbar [data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'chat'))); renderSheet(); });
     if ($('deepgo')) $('deepgo').onclick = () => runDeep(g);
     if ($('deepsave')) $('deepsave').onclick = () => {
       g.deep.rules = $('deeprules').value.trim().slice(0, 3000);
