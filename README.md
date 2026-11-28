@@ -11,4 +11,4 @@
 仕様は [docs/DESIGN.md](docs/DESIGN.md)。
 
 ## 素材の出典
-- 都道府県の地図の形: [Natural Earth](https://www.naturalearthdata.com/) 1:10m Admin 1（パブリックドメイン）。`tools/geo-convert.py` で SVG に変換・簡略化して `bansho.html` に埋め込んでいる。
+- 都道府県の地図の形: [Natural Earth](https://www.naturalearthdata.com/) 1:10m Admin 1（パブリックドメイン）。`tools/geo-convert.py` で SVG に変換・簡略化して `bansho.html` に埋め込んでいる。区画は同じデータを `tools/geo-districts.py`（中心点は `tools/geo-seeds.py`）でボロノイ分割して作った。

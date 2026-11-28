@@ -1,81 +1,145 @@
 // 使い方: node tools/mock-test.cjs <出力先> を一度実行して test.html を作ったあと、node tools/pref-test.cjs <同じ出力先>
-// 都道府県バトルロワイヤル: 隣接の判定・海路・合併・連合・滅亡・地図を偽の AI で確かめる。
+// 都道府県バトルロワイヤル（区画・県ごとの AI・審判 AI）: 命令・外交・戦闘・地図の操作を偽の AI で確かめる。
 const fs = require('fs');
+const path = require('path');
 const { chromium, devices } = require('playwright');
-const src = fs.readFileSync('/home/user/bansho/tools/mock-test.cjs', 'utf8');
+const src = fs.readFileSync(path.join(__dirname, 'mock-test.cjs'), 'utf8');
 const MOCK = src.slice(src.indexOf('const MOCK = `') + 14, src.indexOf('`;\n\n(async'));
+const OUT = path.resolve(process.argv[2] || '.');
+
+// 偽の AI: 県の AI は「相手の 1.6 倍以上の兵がいる隣の区画」を攻め、届いた申し入れはすべて受ける
+const FAKE = () => {
+  const orig = window.claude.use;
+  window.claude.use = async (n) => {
+    const f = await orig(n);
+    if (n !== 'sample' || !f) return f;
+    const j = f.json;
+    const g = async (...a) => f(...a);
+    const plan = (text) => {
+      const orders = [];
+      for (const line of text.split('\n')) {
+        const m = line.match(/^- ([a-z]+\d+)（.*?）兵(\d+)／.*?隣: (.*)$/);
+        if (!m) continue;
+        const t = +m[2];
+        for (const nb of m[3].matchAll(/([a-z]+\d+)\(([^・)]+)・兵(\d+)/g)) {
+          if (nb[2] !== '自' && t > +nb[3] * 1.6 + 1) { orders.push({ type: 'attack', from: m[1], to: nb[1], n: t - 1 }); break; }
+        }
+        if (orders.length >= 2) break;
+      }
+      const diplomacy = [...text.matchAll(/id:([a-z0-9]+)/g)].map((x) => ({ type: 'respond', id: x[1], accept: true, text: 'よかろう' }));
+      return { orders, diplomacy };
+    };
+    g.json = async (input, opts) => {
+      window.__calls.push({ input });
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      if (input.startsWith('【勢力AI・まとめ】')) {
+        await wait(150);
+        const blocks = input.split('\n■').slice(1);
+        return { factions: blocks.map((b) => ({ pref: b.slice(0, b.indexOf('（')), ...plan(b), statement: '' })) };
+      }
+      if (input.startsWith('【勢力AI】')) {
+        await wait(120);
+        const me = input.match(/、(.+?)の暫定政府/)[1];
+        return { thought: '様子を見つつ隙を突く', ...plan(input), statement: me === '宮崎県' ? '宮崎は屈せんど' : '' };
+      }
+      if (input.startsWith('【審判】')) {
+        await wait(150);
+        return { verdicts: [{ no: 1, ok: true, mod: 0.1, reason: '山越えの奇襲' }], player: { outcome: input.includes('漁船') ? 'partial' : 'none', reason: '漁船は集まったが半分ほど', troops: [{ district: 'oita0', delta: 3 }], relations: [] }, notes: '全体に慎重な一週間。' };
+      }
+      if (input.startsWith('【戦況記者】')) { await wait(80); return { headline: '九州で戦端開く', story: '大分県が宮崎県に攻め込んだ。宮崎県の代表は「宮崎は屈せんど」と述べた。' }; }
+      return j(input, opts);
+    };
+    return g;
+  };
+};
+
 (async () => {
   const b = await chromium.launch();
+  const errs = [];
   const ctx = await b.newContext(devices['iPhone 13']);
   await ctx.addInitScript(MOCK);
-  await ctx.addInitScript(() => {
-    const orig = window.claude.use;
-    window.claude.use = async (n) => {
-      const f = await orig(n);
-      if (n !== 'sample' || !f) return f;
-      const j = f.json;
-      const g = async (...a) => f(...a);
-      g.json = async (input, opts) => {
-        if (input.includes('【勢力図】') && input.includes('"narrative"')) {
-          window.__calls.push({ input });
-          await new Promise((r) => setTimeout(r, 200));
-          window.__turn = (window.__turn || 0) + 1;
-          if (window.__win) return { intent: '統一', narrative: '最後の県が降った。', outcome: 'success', outcome_reason: 'x', pref_changes: window.__win, situation: 's', terms: [], suggestions: [] };
-          return { intent: '宮崎に攻め込む', narrative: '大分の部隊は県境を越え、宮崎の守備隊を押し返した。', outcome: 'success', outcome_reason: '兵站で優位', judge_basis: '力の差', situation: '宮崎を得た', terms: [],
-            pref_changes: [{ pref: '宮崎県', to: '大分県', how: '制圧' }, { pref: '北海道', to: '大分', how: '制圧' }, { pref: '沖縄', to: '大分', how: '海路', sea: true }, { pref: '鳥取', to: '岡山', how: '合併' }],
-            power_changes: [{ pref: '大分', delta: -5 }],
-            alliance_changes: [{ op: 'form', name: '瀬戸内同盟', members: ['広島', '愛媛', '岡山'] }],
-            stat_changes: [{ key: 'supply', delta: -6 }], world_events: [{ actor: '岡山県', text: '鳥取県を合併した' }], suggestions: ['a', 'b', 'c'] };
-        }
-        return j(input, opts);
-      };
-      return g;
-    };
-  });
+  await ctx.addInitScript(FAKE);
   const pg = await ctx.newPage();
-  const errs = []; pg.on('pageerror', e => errs.push(e.message)); pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await pg.goto('file://' + require('path').resolve(process.argv[2] || '.', 'test.html'));
+  pg.on('pageerror', (e) => errs.push(e.message)); pg.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  await pg.goto('file://' + path.join(OUT, 'test.html'));
   await pg.waitForTimeout(600);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_1_title.png' });
-  await pg.tap('[data-mode="pref"]'); await pg.waitForTimeout(300);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_2_setup.png' });
+  const shot = (n) => pg.screenshot({ path: path.join(OUT, `pref_${n}.png`) });
+  await pg.tap('[data-mode="pref"]'); await pg.waitForTimeout(200);
   await pg.selectOption('#f-pref', 'oita');
-  await pg.check('input[name="scen"][value="eastwest"]');
-  await pg.tap('#go'); await pg.waitForTimeout(400);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_3_intro.png' });
-  await pg.fill('#cmd', '宮崎県に攻め込む'); await pg.keyboard.press('Enter');
-  await pg.waitForFunction(() => !document.querySelector('#stop'), null, { timeout: 8000 }); await pg.waitForTimeout(300);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_4_turn.png' });
-  const p = await pg.evaluate(() => window.__calls.filter(c => c.input.includes('【勢力図】')).at(-1).input);
-  await pg.tap('.tabbar [data-tab="map"]'); await pg.waitForTimeout(300);
-  await pg.tap('[data-pt="miyazaki"]'); await pg.waitForTimeout(200);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_5_map.png' });
-  const D = require('path').resolve(process.argv[2] || '.');
-  await pg.evaluate(() => document.querySelector('.jmap').scrollIntoView());
-  await pg.screenshot({ path: D + '/pref_5b_mapfull.png' });
-  for (const z of ['east', 'west']) { await pg.tap(`[data-jz="${z}"]`); await pg.waitForTimeout(150); await pg.evaluate(() => document.querySelector('.jzoom').scrollIntoView()); await pg.screenshot({ path: D + `/pref_5c_${z}.png` }); }
-  await pg.tap('[data-jz="east"]'); await pg.waitForTimeout(150); await pg.evaluate(() => document.querySelector('[data-pt="tokyo"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))); await pg.waitForTimeout(150);
-  const selName = await pg.evaluate(() => document.querySelector('.sheet .body b[style*="18px"]')?.textContent);
+  await shot('1_setup');
+  await pg.tap('#go'); await pg.waitForTimeout(500);
+  await shot('2_intro');
+  // 区画を押す（地図の座標 → 画面の座標）
+  const tapD = async (id) => {
+    const p = await pg.evaluate((id) => {
+      const el = document.querySelector(`[data-d="${id}"]`);
+      const svg = document.getElementById('wsvg');
+      const bb = el.getBBox();
+      for (let i = 0; i < 100; i++) {
+        const x = bb.x + bb.width * (0.1 + 0.8 * (i % 10) / 10); const y = bb.y + bb.height * (0.1 + 0.8 * Math.floor(i / 10) / 10);
+        const pt = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM());
+        const hit = document.elementFromPoint(pt.x, pt.y);
+        if (hit && hit.getAttribute('data-d') === id) return [pt.x, pt.y];
+      }
+      return null;
+    }, id);
+    if (!p) throw new Error('区画が画面に見えない: ' + id);
+    await pg.touchscreen.tap(p[0], p[1]);
+    await pg.waitForTimeout(200);
+  };
+  await pg.tap('#wclose'); await pg.waitForTimeout(150);
+  await tapD('oita2');
+  const selTitle = await pg.textContent('.wpb b');
+  await pg.tap('[data-wt="miyazaki1"]'); await pg.waitForTimeout(150);
+  await shot('3_order');
+  await pg.tap('#wadd'); await pg.waitForTimeout(150);
+  // 外交: 福岡に同盟を申し込む
+  await pg.tap('[data-wtab="diplo"]'); await pg.waitForTimeout(150);
+  await pg.evaluate(() => { const d = [...document.querySelectorAll('.frow')].find((x) => x.textContent.includes('福岡県')); d.open = true; });
+  await pg.tap('[data-wp="fukuoka|alliance"]'); await pg.waitForTimeout(150);
+  await shot('4_diplo');
+  await pg.tap('[data-wtab="orders"]'); await pg.waitForTimeout(150);
+  await pg.fill('#wnote', '港の漁船を集めて補給線を作る');
+  const ordersShown = await pg.$$eval('.orow', (x) => x.map((e) => e.textContent));
+  await shot('5_orders');
+  await pg.tap('#wend');
+  await pg.waitForTimeout(250);
+  await shot('6_busy');
+  await pg.waitForFunction(() => !document.querySelector('.wbusy'), null, { timeout: 15000 }); await pg.waitForTimeout(300);
+  await shot('7_report');
+  const report = await pg.$$eval('.wrep .evlist div', (x) => x.map((e) => e.textContent));
+  const calls = await pg.evaluate(() => window.__calls.map((c) => c.input.slice(0, 12)));
+  const st = await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('__fakedb')); const w = Object.values(o).find((v) => v.kind === 'world'); const P = w.pref; return { v: P.v, turn: w.turn, date: w.date, n: Object.keys(P.d).length, mine: Object.values(P.d).filter((d) => d.o === 'oita').length, miyazaki1: P.d.miyazaki1.o, alliances: P.alliances.map((a) => a.name), orders: P.orders.length, lastMoves: P.lastMoves.length }; });
+  await pg.tap('#wclose'); await pg.waitForTimeout(150);
+  await pg.tap('#zout'); await pg.tap('#zout'); await pg.waitForTimeout(150);
+  await shot('8_mapfar');
   const overflow = await pg.evaluate(() => document.documentElement.scrollWidth > innerWidth);
-  console.log({ selName, overflow });
-  await pg.tap('[data-jz="all"]'); await pg.waitForTimeout(150);
-  await pg.evaluate(() => document.querySelector('.sheet .body').scrollTop = 9999);
-  await pg.screenshot({ path: require('path').resolve(process.argv[2] || '.') + '/pref_6_map2.png' });
-  const st = await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('__fakedb')); const w = Object.values(o).find(v => v.kind === 'world'); const R = w.pref.regions; return { miyazaki: R.miyazaki.owner, hokkaido: R.hokkaido.owner, okinawa: R.okinawa.owner, tottori: R.tottori.owner, alliances: w.pref.alliances.map(a => a.name + ':' + a.members.length), tottoriStatus: w.entities.find(e => e.pref === 'tottori').status, ents: w.entities.length }; });
-  const chips = await pg.evaluate(() => [...document.querySelectorAll('.chip')].map(c => c.textContent));
-  console.log({ st, chips, promptHas: { map: p.includes('【勢力図】'), rules: p.includes('【都道府県バトルロワイヤルの決まり】'), schema: p.includes('"pref_changes"'), front: p.includes('【プレイヤーの前線】') }, promptLen: p.length, errs });
-  // 統一の判定
-  await pg.tap('#sclose');
-  await pg.evaluate(() => { window.__win = Object.keys({ hokkaido:1 }).length ? null : null; });
-  await pg.evaluate(() => { const ids = ['hokkaido','aomori','iwate','miyagi','akita','yamagata','fukushima','ibaraki','tochigi','gunma','saitama','chiba','tokyo','kanagawa','niigata','toyama','ishikawa','fukui','yamanashi','nagano','gifu','shizuoka','aichi','mie','shiga','kyoto','osaka','hyogo','nara','wakayama','tottori','shimane','okayama','hiroshima','yamaguchi','tokushima','kagawa','ehime','kochi','fukuoka','saga','nagasaki','kumamoto','miyazaki','kagoshima','okinawa']; window.__win = ids.map(i => ({ pref: i, to: '大分', how: '降伏' })); });
-  // 隣接しない県は無効になるので、事前に全県を手で隣接させるのではなく、1 手ごとに広がる様子を見る
-  for (let i = 0; i < 12; i++) {
-    const ended = await pg.evaluate(() => !!document.querySelector('.end'));
-    if (ended) break;
-    await pg.tap('#progress'); await pg.waitForFunction(() => !document.querySelector('#stop'), null, { timeout: 8000 }); await pg.waitForTimeout(150);
-  }
-  const end = await pg.evaluate(() => document.querySelector('.end')?.innerText);
-  const owned = await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('__fakedb')); const w = Object.values(o).find(v => v.kind === 'world'); return Object.values(w.pref.regions).filter(r => r.owner === 'oita').length; });
-  console.log({ end, owned, errs });
+  // 会話（代表と話す）
+  await pg.tap('[data-wtab="diplo"]'); await pg.waitForTimeout(150);
+  await pg.evaluate(() => { const d = [...document.querySelectorAll('.frow')].find((x) => x.textContent.includes('熊本県')); d.open = true; });
+  await pg.tap('[data-wc="pf_kumamoto"]'); await pg.waitForTimeout(200);
+  await pg.fill('#cmsg', '手を組まないか'); await pg.tap('#csend'); await pg.waitForTimeout(600);
+  const chat = await pg.$$eval('.msg', (x) => x.map((e) => e.textContent));
+  await shot('9_chat');
+  console.log({ selTitle, ordersShown, report, calls, st, overflow, chat, errs });
+
+  // PC: ホイールで拡大、ドラッグで移動
+  const ctx2 = await b.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx2.addInitScript(MOCK); await ctx2.addInitScript(FAKE);
+  const p2 = await ctx2.newPage();
+  const errs2 = []; p2.on('pageerror', (e) => errs2.push(e.message));
+  await p2.goto('file://' + path.join(OUT, 'test.html')); await p2.waitForTimeout(500);
+  await p2.click('[data-mode="pref"]'); await p2.selectOption('#f-pref', 'tokyo'); await p2.click('#go'); await p2.waitForTimeout(400);
+  await p2.click('#wclose');
+  const vb0 = await p2.getAttribute('#wsvg', 'viewBox');
+  await p2.mouse.move(640, 400); await p2.mouse.wheel(0, -400); await p2.waitForTimeout(100);
+  const vb1 = await p2.getAttribute('#wsvg', 'viewBox');
+  await p2.mouse.move(640, 400); await p2.mouse.down(); await p2.mouse.move(500, 300, { steps: 5 }); await p2.mouse.up(); await p2.waitForTimeout(100);
+  const vb2 = await p2.getAttribute('#wsvg', 'viewBox');
+  const near = await p2.evaluate(() => document.getElementById('wsvg').classList.contains('znear'));
+  await p2.screenshot({ path: path.join(OUT, 'pref_10_pc.png') });
+  await p2.click('[data-wtab="rank"]'); await p2.waitForTimeout(150);
+  await p2.screenshot({ path: path.join(OUT, 'pref_11_pc_rank.png') });
+  console.log({ vb0, vb1, vb2, near, errs2 });
   await b.close();
 })();
